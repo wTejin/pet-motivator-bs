@@ -1,0 +1,79 @@
+{
+  "name": "足球训练评分模板",
+  "description": "针对青少年足球训练的六维评分体系",
+  "dimensions": [
+    {
+      "name": "技术能力",
+      "icon": "⚽",
+      "sortOrder": 1,
+      "indicators": [
+        { "name": "传球准确率", "criteria": "短传/长传到达目标区域的准确性", "defaultPoints": 3, "dailyLimit": 15, "sortOrder": 1 },
+        { "name": "控球能力", "criteria": "停球、带球、护球的稳定性", "defaultPoints": 3, "dailyLimit": 15, "sortOrder": 2 },
+        { "name": "射门技术", "criteria": "射门力量、角度和准确度", "defaultPoints": 5, "dailyLimit": 10, "sortOrder": 3 },
+        { "name": "头球能力", "criteria": "争顶头球的时机和方向控制", "defaultPoints": 5, "dailyLimit": 10, "sortOrder": 4 }
+      ]
+    },
+    {
+      "name": "体能素质",
+      "icon": "💪",
+      "sortOrder": 2,
+      "indicators": [
+        { "name": "速度表现", "criteria": "短距离冲刺和长距离跑动速度", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 1 },
+        { "name": "耐力持久", "criteria": "全场跑动不减速，保持高强度", "defaultPoints": 5, "dailyLimit": 10, "sortOrder": 2 },
+        { "name": "力量对抗", "criteria": "身体对抗中的稳定性和护球能力", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 3 },
+        { "name": "灵敏协调", "criteria": "变向、转身、急停的灵活度", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 4 }
+      ]
+    },
+    {
+      "name": "战术意识",
+      "icon": "🧠",
+      "sortOrder": 3,
+      "indicators": [
+        { "name": "位置感", "criteria": "攻防转换中的站位选择", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 1 },
+        { "name": "跑位策应", "criteria": "无球跑动创造空间和接应点", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 2 },
+        { "name": "决策判断", "criteria": "传球/射门/盘带的选择合理性", "defaultPoints": 5, "dailyLimit": 10, "sortOrder": 3 },
+        { "name": "空间阅读", "criteria": "识别场上空间和对手防守漏洞", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 4 }
+      ]
+    },
+    {
+      "name": "心理品质",
+      "icon": "❤️",
+      "sortOrder": 4,
+      "indicators": [
+        { "name": "抗压能力", "criteria": "关键时刻保持冷静和发挥稳定", "defaultPoints": 5, "dailyLimit": 10, "sortOrder": 1 },
+        { "name": "自信心", "criteria": "敢于拿球、敢于尝试技术动作", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 2 },
+        { "name": "专注度", "criteria": "训练和比赛中的注意力集中程度", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 3 },
+        { "name": "情绪管理", "criteria": "面对失误和判罚时的情绪控制", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 4 }
+      ]
+    },
+    {
+      "name": "团队协作",
+      "icon": "🤝",
+      "sortOrder": 5,
+      "indicators": [
+        { "name": "配合意识", "criteria": "主动寻求配合，善于团队进攻", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 1 },
+        { "name": "沟通交流", "criteria": "场上语言和非语言的有效沟通", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 2 },
+        { "name": "防守参与", "criteria": "积极回防和参与整体防守", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 3 },
+        { "name": "领导力", "criteria": "组织队友、鼓舞士气的表现", "defaultPoints": 5, "dailyLimit": 10, "sortOrder": 4 }
+      ]
+    },
+    {
+      "name": "成长态度",
+      "icon": "🌱",
+      "sortOrder": 6,
+      "indicators": [
+        { "name": "训练出勤", "criteria": "准时参加训练，不无故缺席", "defaultPoints": 5, "dailyLimit": 5, "sortOrder": 1 },
+        { "name": "努力程度", "criteria": "训练中的投入程度和拼搏精神", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 2 },
+        { "name": "学习能力", "criteria": "接受教练指导并快速改进", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 3 },
+        { "name": "体育精神", "criteria": "尊重对手、尊重裁判、公平竞争", "defaultPoints": 3, "dailyLimit": 9, "sortOrder": 4 }
+      ]
+    }
+  ],
+  "bonusRules": [
+    { "name": "本周MVP", "points": 20, "frequency": "weekly", "criteria": "本周综合表现最突出的球员" },
+    { "name": "最佳进步奖", "points": 15, "frequency": "weekly", "criteria": "本周进步幅度最大的球员" },
+    { "name": "全勤之星", "points": 10, "frequency": "monthly", "criteria": "本月全勤参加训练的球员" },
+    { "name": "团队贡献奖", "points": 15, "frequency": "monthly", "criteria": "本月团队协作表现最佳的球员" },
+    { "name": "精神文明奖", "points": 10, "frequency": "weekly", "criteria": "本周在体育精神方面表现突出的球员" }
+  ]
+}
