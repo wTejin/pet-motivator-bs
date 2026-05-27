@@ -1,6 +1,10 @@
 import express from 'express'
 import cors from 'cors'
 import { config } from './config'
+
+// BigInt JSON 序列化修复（Prisma 返回 BigInt 字段）
+// @ts-ignore
+BigInt.prototype.toJSON = function () { return Number(this) }
 import { errorHandler } from './middleware/errorHandler'
 import { adminRouter } from './routes/admin'
 import { coachRouter } from './routes/coach'
