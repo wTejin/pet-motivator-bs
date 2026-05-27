@@ -25,6 +25,28 @@ publicRouter.get('/public/players/:phone', async (req, res) => {
   })
 })
 
+publicRouter.get('/public/leaderboard/:phone', async (req, res) => {
+  const phone = req.params.phone as string
+  const coach = await db.coach.findUnique({ where: { phone } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+
+  const players = await db.player.findMany({
+    where: { coachId: coach.id, isActive: true },
+    orderBy: { currentPoints: 'desc' },
+    select: { id: true, name: true, avatar: true, currentPoints: true },
+  })
+
+  const data = players.map((p, index) => ({
+    playerId: p.id,
+    playerName: p.name,
+    playerAvatar: p.avatar,
+    currentPoints: p.currentPoints,
+    rank: index + 1,
+  }))
+
+  res.json({ success: true, data })
+})
+
 // ===== 宠物 =====
 playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
   const playerId = req.params.playerId as string
