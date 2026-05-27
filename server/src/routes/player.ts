@@ -47,6 +47,41 @@ publicRouter.get('/public/leaderboard/:phone', async (req, res) => {
   res.json({ success: true, data })
 })
 
+publicRouter.get('/public/activities/:phone', async (req, res) => {
+  const phone = req.params.phone as string
+  const coach = await db.coach.findUnique({ where: { phone } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+
+  const records = await db.scoreRecord.findMany({
+    where: { coachId: coach.id },
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+    include: { player: { select: { name: true, avatar: true } } },
+  })
+
+  const data = records.map((r) => {
+    let type: string = 'score'
+    let description = r.reason || '积分变动'
+    if (r.reason?.includes('喂食')) { type = 'feed'; description = '喂食宠物' }
+    else if (r.reason?.includes('训练') || r.reason?.includes('玩耍')) { type = 'play'; description = '训练宠物' }
+    else if (r.reason?.includes('购买') || r.reason?.includes('进化')) { type = 'evolution'; description = r.reason }
+    else if (r.reason?.includes('商店') || r.reason?.includes('购买')) { type = 'purchase'; description = r.reason }
+
+    return {
+      id: r.id,
+      type,
+      playerId: r.playerId,
+      playerName: r.player?.name || '未知学员',
+      playerAvatar: r.player?.avatar || '😊',
+      description,
+      points: r.points,
+      createdAt: Number(r.createdAt),
+    }
+  })
+
+  res.json({ success: true, data })
+})
+
 // ===== 宠物 =====
 playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
   const playerId = req.params.playerId as string
