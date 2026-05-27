@@ -23,39 +23,27 @@ const router = createRouter({
       component: () => import('@/views/player/PlayerShopPage.vue'),
     },
     {
+      path: '/screen',
+      name: 'teamScreen',
+      component: () => import('@/views/team/TeamScreenPage.vue'),
+    },
+    {
       path: '/login',
       name: 'coachLogin',
       component: () => import('@/views/coach/CoachLoginPage.vue'),
     },
     {
-      path: '/coach/dashboard',
-      name: 'coachDashboard',
-      component: () => import('@/views/coach/CoachDashboardPage.vue'),
-    },
-    {
-      path: '/coach/score',
-      name: 'coachScore',
-      component: () => import('@/views/coach/CoachScorePage.vue'),
-    },
-    {
-      path: '/coach/score-config',
-      name: 'coachScoreConfig',
-      component: () => import('@/views/coach/CoachScoreConfigPage.vue'),
-    },
-    {
-      path: '/coach/players',
-      name: 'coachPlayers',
-      component: () => import('@/views/coach/CoachPlayersPage.vue'),
-    },
-    {
-      path: '/coach/player-cards',
-      name: 'coachPlayerCards',
-      component: () => import('@/views/coach/CoachPlayerCardsPage.vue'),
-    },
-    {
-      path: '/coach/shop',
-      name: 'coachShop',
-      component: () => import('@/views/coach/CoachShopPage.vue'),
+      path: '/coach',
+      component: () => import('@/views/coach/CoachLayout.vue'),
+      children: [
+        { path: '', redirect: '/coach/dashboard' },
+        { path: 'dashboard', name: 'coachDashboard', component: () => import('@/views/coach/CoachDashboardPage.vue') },
+        { path: 'score', name: 'coachScore', component: () => import('@/views/coach/CoachScorePage.vue') },
+        { path: 'score-config', name: 'coachScoreConfig', component: () => import('@/views/coach/CoachScoreConfigPage.vue') },
+        { path: 'players', name: 'coachPlayers', component: () => import('@/views/coach/CoachPlayersPage.vue') },
+        { path: 'player-cards', name: 'coachPlayerCards', component: () => import('@/views/coach/CoachPlayerCardsPage.vue') },
+        { path: 'shop', name: 'coachShop', component: () => import('@/views/coach/CoachShopPage.vue') },
+      ],
     },
     {
       path: '/admin/login',
@@ -63,14 +51,13 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminLoginPage.vue'),
     },
     {
-      path: '/admin/dashboard',
-      name: 'adminDashboard',
-      component: () => import('@/views/admin/AdminDashboardPage.vue'),
-    },
-    {
-      path: '/admin/coaches',
-      name: 'adminCoaches',
-      component: () => import('@/views/admin/AdminCoachesPage.vue'),
+      path: '/admin',
+      component: () => import('@/views/admin/AdminLayout.vue'),
+      children: [
+        { path: '', redirect: '/admin/dashboard' },
+        { path: 'dashboard', name: 'adminDashboard', component: () => import('@/views/admin/AdminDashboardPage.vue') },
+        { path: 'coaches', name: 'adminCoaches', component: () => import('@/views/admin/AdminCoachesPage.vue') },
+      ],
     },
   ],
 })

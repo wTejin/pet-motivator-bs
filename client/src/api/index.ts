@@ -168,3 +168,17 @@ export const playerApi = {
     return api.get(`/player/${playerId}/leaderboard`)
   },
 }
+
+// ── Public API ───────────────────────────────────────────────────────────────
+
+export const publicApi = {
+  getPlayers(phone: string) {
+    return api.get(`/public/players/${phone}`)
+  },
+  getLeaderboard(phone: string) {
+    return api.get(`/public/leaderboard/${phone}`)
+  },
+  getActivities(phone: string) {
+    return api.get(`/public/activities/${phone}`)
+  },
+}
