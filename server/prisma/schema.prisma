@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String @id @default(uuid())
+  username     String @unique
+  passwordHash String
+  createdAt    BigInt
+}
+
+model Coach {
+  id              String @id @default(uuid())
+  phone           String @unique
+  passwordHash    String
+  name            String
+  school          String @default("")
+  isActive        Boolean @default(true)
+  trialUntil      BigInt
+  authorizedUntil BigInt
+  playerMode      String @default("display")
+  createdAt       BigInt
+  updatedAt       BigInt
+
+  players          Player[]
+  scoreRecords     ScoreRecord[]
+  scoreDimensions  ScoreDimension[]
+  bonusRules       BonusRule[]
+  shopItems        ShopItem[]
+}
+
+model Player {
+  id             String @id @default(uuid())
+  coachId        String
+  name           String
+  avatar         String @default("😊")
+  currentPoints  Int @default(0)
+  lifetimePoints Int @default(0)
+  isActive       Boolean @default(true)
+  createdAt      BigInt
+  updatedAt      BigInt
+
+  coach        Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  pet          Pet?
+  scoreRecords ScoreRecord[]
+  inventory    PlayerInventory[]
+}
+
+model Pet {
+  id                  String @id @default(uuid())
+  playerId            String @unique
+  speciesId           String
+  name                String
+  stage               String @default("egg")
+  carePoints          Int @default(0)
+  level               Int @default(1)
+  hunger              Int @default(100)
+  mood                Int @default(100)
+  currentSkin         String @default("default")
+  equippedDecorations String[] @default([])
+  lastDecayAt         BigInt
+  lastFedAt           BigInt
+  lastPlayedAt        BigInt @default(0)
+  createdAt           BigInt
+  evolvedAt           BigInt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model ScoreDimension {
+  id        String @id @default(uuid())
+  coachId   String
+  name      String
+  icon      String @default("⭐")
+  sortOrder Int @default(0)
+  isActive  Boolean @default(true)
+
+  coach      Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  indicators ScoreIndicator[]
+}
+
+model ScoreIndicator {
+  id            String @id @default(uuid())
+  dimensionId   String
+  name          String
+  criteria      String @default("")
+  defaultPoints Int @default(5)
+  dailyLimit    Int @default(20)
+  isActive      Boolean @default(true)
+  sortOrder     Int @default(0)
+
+  dimension ScoreDimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+}
+
+model ScoreRecord {
+  id           String @id @default(uuid())
+  coachId      String
+  playerId     String
+  ruleId       String?
+  indicatorId  String?
+  sessionId    String?
+  points       Int
+  type         String
+  reason       String
+  operatorType String @default("coach")
+  operatorId   String @default("system")
+  createdAt    BigInt
+
+  coach  Coach  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+}
+
+model BonusRule {
+  id        String @id @default(uuid())
+  coachId   String
+  name      String
+  points    Int
+  frequency String
+  criteria  String @default("")
+  isActive  Boolean @default(true)
+
+  coach Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+}
+
+model ShopItem {
+  id          String @id @default(uuid())
+  coachId     String?
+  name        String
+  description String @default("")
+  type        String
+  price       Int
+  effect      Json
+  imageClass  String @default("")
+  stock       Int @default(999)
+  isActive    Boolean @default(true)
+  sortOrder   Int @default(0)
+  createdAt   BigInt
+
+  coach Coach? @relation(fields: [coachId], references: [id], onDelete: SetNull)
+}
+
+model PlayerInventory {
+  id         String @id @default(uuid())
+  playerId   String
+  itemId     String
+  quantity   Int @default(1)
+  isEquipped Boolean @default(false)
+  acquiredAt BigInt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, itemId])
+}
+
+model PetSpeciesDef {
+  id              String @id
+  name            String
+  category        String
+  description     String @default("")
+  emoji           String
+  backgroundColor String
+  accentColor     String
+  stages          Json
+}
+
+model AccessoryDef {
+  id       String @id
+  name     String
+  slot     String
+  emoji    String
+  imageUrl String?
+  position Json
+}
+
+model PetBackgroundDef {
+  id             String @id
+  name           String
+  cssGradient    String
+  imageUrl       String?
+  thumbnailColor String
+}
+
+model CustomData {
+  id         String @id @default(uuid())
+  coachId    String?
+  type       String
+  data       Json
+  importedAt BigInt
+}
