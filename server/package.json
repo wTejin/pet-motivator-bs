@@ -1,0 +1,28 @@
+{
+  "name": "pet-motivator-bs-server",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.0",
+    "bcryptjs": "^2.4.3",
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/bcryptjs": "^2.4.0",
+    "tsx": "^4.19.0",
+    "prisma": "^5.22.0"
+  }
+}
