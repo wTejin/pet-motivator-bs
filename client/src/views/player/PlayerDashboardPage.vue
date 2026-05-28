@@ -1,111 +1,110 @@
 <template>
-  <div class="luxury-page">
-    <!-- Subtle grain overlay -->
-    <div class="grain-overlay"></div>
-
-    <!-- Loading State -->
+  <div class="dashboard-page">
+    <!-- Loading -->
     <div v-if="loading" class="loading-state">
-      <div class="loading-pulse"></div>
-      <p class="loading-text">加载中</p>
+      <div class="loading-spinner"></div>
+      <p class="loading-text">加载中...</p>
     </div>
 
-    <!-- Error State -->
+    <!-- Error -->
     <div v-else-if="error" class="error-state">
-      <div class="error-card">
-        <p class="error-icon">—</p>
-        <p class="error-msg">{{ error }}</p>
-        <button class="luxury-btn-ghost" @click="retry">重试</button>
-      </div>
+      <p class="error-icon">😕</p>
+      <p class="error-msg">{{ error }}</p>
+      <button class="retry-btn" @click="retry">重试</button>
     </div>
 
     <!-- Main Content -->
     <main v-else-if="pet" class="main-content">
-      <!-- Pet Display — large, centered, breathing space -->
-      <section class="pet-hero">
-        <div class="pet-aura"></div>
-        <div class="pet-emoji">{{ petEmoji }}</div>
-        <h1 class="pet-name">{{ pet.name }}</h1>
-        <div class="pet-meta">
-          <span class="stage-badge" :style="{ '--stage-color': stageColor(pet.stage) }">
-            {{ stageLabel(pet.stage) }}
-          </span>
-          <span class="level-text">Lv.{{ pet.level }}</span>
-        </div>
-      </section>
+      <!-- Header -->
+      <header class="page-header">
+        <router-link
+          v-if="coachPhone"
+          :to="`/screen?c=${coachPhone}`"
+          class="back-btn"
+        >
+          ←
+        </router-link>
+        <h1 class="page-title">{{ pet.name }}的宠物档案</h1>
+      </header>
 
-      <!-- Vital Bars — thin, refined -->
-      <section class="vitals">
-        <div class="vital-row">
-          <span class="vital-label">饱食</span>
-          <div class="vital-track">
-            <div
-              class="vital-fill"
-              :style="{ width: pet.hunger + '%', background: hungerGradient(pet.hunger) }"
-            ></div>
+      <div class="dashboard-body">
+        <!-- Left: FIFA Card -->
+        <section class="card-section">
+          <FifaPlayerCard
+            v-if="playerStats"
+            :stats="playerStats"
+            theme="light"
+          />
+          <div v-else class="card-placeholder">
+            <p>暂无能力数据</p>
           </div>
-          <span class="vital-value">{{ pet.hunger }}</span>
-        </div>
-        <div class="vital-row">
-          <span class="vital-label">心情</span>
-          <div class="vital-track">
-            <div
-              class="vital-fill"
-              :style="{ width: pet.mood + '%', background: moodGradient(pet.mood) }"
-            ></div>
-          </div>
-          <span class="vital-value">{{ pet.mood }}</span>
-        </div>
-      </section>
+        </section>
 
-      <!-- Display Mode Banner -->
-      <div v-if="isDisplayMode" class="mode-banner">
-        展示模式 · 操作已暂停
+        <!-- Right: Pet Interaction -->
+        <section class="pet-section">
+          <div class="pet-card-wrapper">
+            <PlayerPetCard :pet="pet" />
+            <div class="pet-name-display">{{ pet.name }}</div>
+          </div>
+
+          <!-- Vitals -->
+          <div class="vitals">
+            <div class="vital-row">
+              <span class="vital-label">饱食</span>
+              <div class="vital-track">
+                <div
+                  class="vital-fill"
+                  :style="{ width: pet.hunger + '%', background: hungerGradient(pet.hunger) }"
+                ></div>
+              </div>
+              <span class="vital-value">{{ pet.hunger }}</span>
+            </div>
+            <div class="vital-row">
+              <span class="vital-label">心情</span>
+              <div class="vital-track">
+                <div
+                  class="vital-fill"
+                  :style="{ width: pet.mood + '%', background: moodGradient(pet.mood) }"
+                ></div>
+              </div>
+              <span class="vital-value">{{ pet.mood }}</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="actions">
+            <button class="action-btn action-feed" @click="handleFeed">
+              <span class="btn-icon">🍖</span>
+              <span class="btn-label">喂食</span>
+            </button>
+            <button class="action-btn action-play" @click="handlePlay">
+              <span class="btn-icon">🎾</span>
+              <span class="btn-label">训练</span>
+            </button>
+          </div>
+
+          <!-- Points -->
+          <div class="points-display">
+            <span class="points-label">当前积分</span>
+            <span class="points-value">{{ currentPoints }}</span>
+            <span class="points-star">⭐</span>
+          </div>
+
+          <!-- Links -->
+          <router-link :to="`/player/${playerId}/shop`" class="link-row">
+            🏪 去商店 <span class="link-arrow">&gt;</span>
+          </router-link>
+          <router-link
+            v-if="coachPhone"
+            :to="`/screen?c=${coachPhone}`"
+            class="link-row"
+          >
+            👀 返回全班大屏 <span class="link-arrow">&gt;</span>
+          </router-link>
+        </section>
       </div>
 
-      <!-- Actions — restrained, architectural -->
-      <section class="actions">
-        <button
-          :disabled="isDisplayMode"
-          class="luxury-btn action-feed"
-          @click="handleFeed"
-        >
-          <span class="btn-icon">—</span>
-          <span class="btn-label">喂食</span>
-          <span class="btn-hint">恢复饱食度</span>
-        </button>
-        <button
-          :disabled="isDisplayMode"
-          class="luxury-btn action-play"
-          @click="handlePlay"
-        >
-          <span class="btn-icon">—</span>
-          <span class="btn-label">训练</span>
-          <span class="btn-hint">提升心情值</span>
-        </button>
-      </section>
-
-      <!-- Points — elegant stat -->
-      <section class="points-display">
-        <span class="points-label">当前积分</span>
-        <span class="points-value">{{ currentPoints }}</span>
-      </section>
-
-      <!-- Shop Link — understated -->
-      <router-link :to="`/player/${playerId}/shop`" class="shop-link">
-        商店
-        <span class="shop-arrow">&rarr;</span>
-      </router-link>
-
-      <!-- Back to Team Screen -->
-      <router-link
-        v-if="coachPhone"
-        :to="`/screen?c=${coachPhone}`"
-        class="back-link"
-      >
-        ← 返回全班大屏
-      </router-link>
-
-      <!-- Feedback Toast -->
+      <!-- Toast -->
       <Transition name="toast">
         <div v-if="actionMessage" class="toast toast-success">{{ actionMessage }}</div>
       </Transition>
@@ -117,9 +116,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { playerApi } from '@/api'
+import { playerApi, publicApi } from '@/api'
+import FifaPlayerCard from '@/components/FifaPlayerCard.vue'
+import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
+import type { PlayerStats } from '@shared/types'
 
 const route = useRoute()
 const playerId = route.params.playerId as string
@@ -132,11 +134,14 @@ interface PetData {
   hunger: number
   mood: number
   speciesId: string
-  species: any
+  currentPoints: number
+  species: {
+    stages: Record<string, { emoji: string; imageUrl?: string }>
+  } | null
 }
 
 const pet = ref<PetData | null>(null)
-const isDisplayMode = ref(false)
+const playerStats = ref<PlayerStats | null>(null)
 const currentPoints = ref(0)
 const loading = ref(true)
 const error = ref('')
@@ -144,24 +149,26 @@ const actionMessage = ref('')
 const actionError = ref('')
 const coachPhone = ref('')
 
-const petEmoji = computed(() => {
-  if (!pet.value?.species?.stages) return '○'
-  const stageData = pet.value.species.stages[pet.value.stage]
-  return stageData?.emoji || '○'
-})
-
 async function loadData() {
   loading.value = true
   error.value = ''
+  coachPhone.value = route.query.c as string || ''
+
   try {
-    const [petRes, modeRes] = await Promise.all([
-      playerApi.getPet(playerId),
-      playerApi.getMode(playerId),
-    ])
+    const petRes = await playerApi.getPet(playerId)
     pet.value = petRes.data.data
-    isDisplayMode.value = modeRes.data.data?.playerMode === 'display'
-    coachPhone.value = route.query.c as string || ''
-    currentPoints.value = 0
+    currentPoints.value = petRes.data.data?.currentPoints || 0
+
+    if (coachPhone.value) {
+      try {
+        const statsRes = await publicApi.getPlayerStats(coachPhone.value, playerId)
+        if (statsRes.data.success) {
+          playerStats.value = statsRes.data.data
+        }
+      } catch (e) {
+        console.warn('Failed to load player stats', e)
+      }
+    }
   } catch (e: any) {
     error.value = e.response?.data?.error || '加载失败'
   } finally {
@@ -170,35 +177,18 @@ async function loadData() {
 }
 
 function retry() { loadData() }
-
 onMounted(loadData)
 
-function stageLabel(stage: string): string {
-  const map: Record<string, string> = { egg: '初生', baby: '幼体', teen: '成长', adult: '成熟', rare: '臻藏' }
-  return map[stage] || stage
-}
-
-function stageColor(stage: string): string {
-  const map: Record<string, string> = {
-    egg: '#A0A0A0',
-    baby: '#B8A88A',
-    teen: '#C6A962',
-    adult: '#D4AF37',
-    rare: '#E8D5A3',
-  }
-  return map[stage] || '#C6A962'
-}
-
 function hungerGradient(v: number): string {
-  if (v > 60) return 'linear-gradient(90deg, #8B9D83, #A3B899)'
-  if (v > 30) return 'linear-gradient(90deg, #C6A962, #D4AF37)'
-  return 'linear-gradient(90deg, #9B4D3F, #C46A5A)'
+  if (v > 60) return 'linear-gradient(90deg, #4caf50, #66bb6a)'
+  if (v > 30) return 'linear-gradient(90deg, #ff9800, #ffb74d)'
+  return 'linear-gradient(90deg, #f44336, #ef5350)'
 }
 
 function moodGradient(v: number): string {
-  if (v > 60) return 'linear-gradient(90deg, #7A8B9D, #99AEC4)'
-  if (v > 30) return 'linear-gradient(90deg, #B8A88A, #C6A962)'
-  return 'linear-gradient(90deg, #8B5A5A, #B07070)'
+  if (v > 60) return 'linear-gradient(90deg, #42a5f5, #64b5f6)'
+  if (v > 30) return 'linear-gradient(90deg, #ff9800, #ffb74d)'
+  return 'linear-gradient(90deg, #f44336, #ef5350)'
 }
 
 async function handleFeed() {
@@ -213,7 +203,7 @@ async function handleFeed() {
       pet.value.stage = data.stage
     }
     currentPoints.value = data.currentPoints
-    actionMessage.value = data.evolved ? '· 进化 ·' : '· 已喂食 ·'
+    actionMessage.value = data.evolved ? '✨ 进化！' : '🍖 已喂食'
   } catch (e: any) {
     actionError.value = e.response?.data?.error || '操作失败'
   }
@@ -231,7 +221,7 @@ async function handlePlay() {
       pet.value.stage = data.stage
     }
     currentPoints.value = data.currentPoints
-    actionMessage.value = data.evolved ? '· 进化 ·' : '· 已训练 ·'
+    actionMessage.value = data.evolved ? '✨ 进化！' : '🎾 已训练'
   } catch (e: any) {
     actionError.value = e.response?.data?.error || '操作失败'
   }
@@ -239,170 +229,144 @@ async function handlePlay() {
 </script>
 
 <style scoped>
-/* ===== Page Foundation ===== */
-.luxury-page {
+/* ===== Page ===== */
+.dashboard-page {
   min-height: 100vh;
   min-height: 100dvh;
-  background: #0D0D0D;
-  color: #C8C0B8;
+  background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
   font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
+  padding: 16px;
 }
 
-/* Subtle film grain */
-.grain-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-}
-
-/* ===== Loading ===== */
-.loading-state {
+/* ===== Loading / Error ===== */
+.loading-state,
+.error-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
-  z-index: 2;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: #666;
 }
 
-.loading-pulse {
-  width: 4px;
-  height: 4px;
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #42a5f5;
   border-radius: 50%;
-  background: #C6A962;
-  animation: pulse-subtle 2s ease-in-out infinite;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes pulse-subtle {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(198, 169, 98, 0.4); }
-  50% { box-shadow: 0 0 0 24px rgba(198, 169, 98, 0); }
-}
-
-.loading-text {
-  font-size: 0.6875rem;
-  letter-spacing: 0.2em;
-  color: rgba(200, 192, 184, 0.3);
-  text-transform: uppercase;
-}
-
-/* ===== Error ===== */
-.error-state { z-index: 2; }
-
-.error-card {
-  text-align: center;
-  padding: 3rem 2rem;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .error-icon {
-  font-size: 2rem;
-  color: rgba(200, 192, 184, 0.2);
-  margin-bottom: 1.5rem;
+  font-size: 48px;
 }
 
 .error-msg {
-  font-size: 0.8125rem;
-  color: rgba(200, 192, 184, 0.5);
-  margin-bottom: 2rem;
-  letter-spacing: 0.05em;
+  font-size: 16px;
+  color: #999;
 }
 
-.luxury-btn-ghost {
-  background: none;
-  border: 1px solid rgba(200, 192, 184, 0.15);
-  color: rgba(200, 192, 184, 0.5);
-  padding: 0.625rem 2rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.15em;
+.retry-btn {
+  padding: 8px 24px;
+  border-radius: 24px;
+  border: none;
+  background: #42a5f5;
+  color: white;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.4s ease;
-}
-
-.luxury-btn-ghost:hover {
-  border-color: rgba(200, 192, 184, 0.4);
-  color: rgba(200, 192, 184, 0.8);
 }
 
 /* ===== Main Content ===== */
 .main-content {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 360px;
-  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2rem;
+  gap: 16px;
 }
 
-/* ===== Pet Hero ===== */
-.pet-hero {
+/* ===== Header ===== */
+.page-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  position: relative;
+  gap: 12px;
 }
 
-.pet-aura {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 180px;
-  height: 180px;
+.back-btn {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(198, 169, 98, 0.06) 0%, transparent 70%);
-  pointer-events: none;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #666;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.pet-emoji {
-  font-size: 5rem;
-  line-height: 1;
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5));
-  transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
-  position: relative;
-  z-index: 1;
-}
-
-.pet-name {
-  font-family: 'ZCOOL KuaiLe', serif;
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: #D4C8B8;
-  letter-spacing: 0.08em;
+.page-title {
+  font-family: 'ZCOOL KuaiLe', 'PingFang SC', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
   margin: 0;
 }
 
-.pet-meta {
+/* ===== Body Layout ===== */
+.dashboard-body {
   display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.card-section {
+  flex: 0 0 55%;
+  min-width: 0;
+}
+
+.pet-section {
+  flex: 0 0 45%;
+  min-width: 0;
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 20px;
 }
 
-.stage-badge {
-  font-size: 0.625rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--stage-color, #C6A962);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--stage-color, #C6A962) 25%, transparent);
+.card-placeholder {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.level-text {
-  font-family: 'Russo One', sans-serif;
-  font-size: 0.6875rem;
-  color: rgba(200, 192, 184, 0.35);
-  letter-spacing: 0.1em;
+/* ===== Pet Display ===== */
+.pet-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pet-name-display {
+  font-family: 'ZCOOL KuaiLe', sans-serif;
+  font-size: 20px;
+  color: #333;
 }
 
 /* ===== Vitals ===== */
@@ -410,190 +374,132 @@ async function handlePlay() {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 12px;
 }
 
 .vital-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 .vital-label {
-  font-size: 0.625rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(200, 192, 184, 0.35);
-  width: 2.5rem;
+  font-size: 14px;
+  color: #666;
+  width: 40px;
   flex-shrink: 0;
+  font-weight: 600;
 }
 
 .vital-track {
   flex: 1;
-  height: 2px;
-  background: rgba(200, 192, 184, 0.08);
-  position: relative;
+  height: 10px;
+  background: #f0f0f0;
+  border-radius: 5px;
   overflow: hidden;
 }
 
 .vital-fill {
   height: 100%;
-  transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
-  position: relative;
-}
-
-.vital-fill::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: inherit;
-  filter: brightness(1.5);
+  border-radius: 5px;
+  transition: width 0.6s ease-out;
 }
 
 .vital-value {
-  font-family: 'Russo One', sans-serif;
-  font-size: 0.6875rem;
-  color: rgba(200, 192, 184, 0.4);
-  width: 2rem;
+  font-size: 14px;
+  color: #333;
+  width: 36px;
   text-align: right;
-  flex-shrink: 0;
-}
-
-/* ===== Mode Banner ===== */
-.mode-banner {
-  width: 100%;
-  text-align: center;
-  font-size: 0.625rem;
-  letter-spacing: 0.15em;
-  color: rgba(198, 169, 98, 0.5);
-  padding: 0.75rem;
-  border-top: 1px solid rgba(198, 169, 98, 0.1);
-  border-bottom: 1px solid rgba(198, 169, 98, 0.1);
+  font-weight: 700;
+  font-family: 'Russo One', sans-serif;
 }
 
 /* ===== Actions ===== */
 .actions {
   width: 100%;
   display: flex;
-  gap: 1px;
-  background: rgba(200, 192, 184, 0.06);
+  gap: 12px;
 }
 
-.luxury-btn {
+.action-btn {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
-  padding: 1.5rem 1rem;
-  background: #0D0D0D;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
   border: none;
   cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
-  position: relative;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.luxury-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(200, 192, 184, 0.03);
-  opacity: 0;
-  transition: opacity 0.5s ease;
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.luxury-btn:hover::before {
-  opacity: 1;
+.action-feed {
+  background: linear-gradient(135deg, #ff9800, #ffb74d);
+  color: white;
 }
 
-.luxury-btn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-}
-
-.luxury-btn:disabled::before {
-  display: none;
+.action-play {
+  background: linear-gradient(135deg, #2196f3, #64b5f6);
+  color: white;
 }
 
 .btn-icon {
-  font-size: 1.25rem;
-  color: rgba(200, 192, 184, 0.5);
-  transition: color 0.4s ease;
-}
-
-.luxury-btn:hover .btn-icon {
-  color: #D4AF37;
-}
-
-.btn-label {
-  font-size: 0.8125rem;
-  letter-spacing: 0.12em;
-  color: #C8C0B8;
-}
-
-.btn-hint {
-  font-size: 0.5625rem;
-  letter-spacing: 0.1em;
-  color: rgba(200, 192, 184, 0.2);
-  transition: color 0.4s ease;
-}
-
-.luxury-btn:hover .btn-hint {
-  color: rgba(200, 192, 184, 0.4);
+  font-size: 24px;
 }
 
 /* ===== Points ===== */
 .points-display {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 6px;
+  font-size: 18px;
 }
 
 .points-label {
-  font-size: 0.5625rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(200, 192, 184, 0.25);
+  color: #666;
+  font-size: 14px;
 }
 
 .points-value {
   font-family: 'Russo One', sans-serif;
-  font-size: 2.5rem;
-  color: #D4AF37;
-  letter-spacing: 0.05em;
-  line-height: 1;
+  font-size: 28px;
+  color: #ff9800;
 }
 
-/* ===== Shop Link ===== */
-.shop-link {
+.points-star {
+  font-size: 20px;
+}
+
+/* ===== Links ===== */
+.link-row {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.6875rem;
-  letter-spacing: 0.15em;
-  color: rgba(200, 192, 184, 0.3);
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f8f9fa;
+  color: #333;
   text-decoration: none;
-  padding: 0.5rem 0;
-  transition: color 0.4s ease;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
 }
 
-.shop-link:hover {
-  color: rgba(200, 192, 184, 0.6);
+.link-row:hover {
+  background: #e3f2fd;
 }
 
-.shop-arrow {
-  font-size: 0.875rem;
-  transition: transform 0.4s ease;
-}
-
-.shop-link:hover .shop-arrow {
-  transform: translateX(3px);
+.link-arrow {
+  color: #999;
 }
 
 /* ===== Toast ===== */
@@ -602,31 +508,31 @@ async function handlePlay() {
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.625rem 2rem;
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
+  padding: 10px 28px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
   z-index: 10;
   pointer-events: none;
 }
 
 .toast-success {
-  color: #C6A962;
-  border: 1px solid rgba(198, 169, 98, 0.2);
-  background: rgba(13, 13, 13, 0.95);
+  color: #2e7d32;
+  background: #e8f5e9;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .toast-error {
-  color: #B07070;
-  border: 1px solid rgba(176, 112, 112, 0.2);
-  background: rgba(13, 13, 13, 0.95);
+  color: #c62828;
+  background: #ffebee;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-/* Toast transitions */
 .toast-enter-active {
-  transition: all 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: all 0.4s ease;
 }
 .toast-leave-active {
-  transition: all 0.3s ease-in;
+  transition: all 0.2s ease-in;
 }
 .toast-enter-from {
   opacity: 0;
@@ -637,19 +543,31 @@ async function handlePlay() {
   transform: translateX(-50%) translateY(-4px);
 }
 
-.back-link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.6875rem;
-  letter-spacing: 0.15em;
-  color: rgba(200, 192, 184, 0.3);
-  text-decoration: none;
-  padding: 0.5rem 0;
-  transition: color 0.4s ease;
+/* ===== Responsive: Tablet ===== */
+@media (max-width: 1024px) {
+  .dashboard-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .card-section,
+  .pet-section {
+    flex: 1 1 auto;
+    width: 80%;
+    margin: 0 auto;
+  }
 }
 
-.back-link:hover {
-  color: rgba(200, 192, 184, 0.6);
+/* ===== Responsive: Mobile ===== */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 12px;
+  }
+  .card-section,
+  .pet-section {
+    width: 100%;
+  }
+  .page-title {
+    font-size: 18px;
+  }
 }
 </style>
