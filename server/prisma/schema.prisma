@@ -24,6 +24,8 @@ model Coach {
   trialUntil      BigInt
   authorizedUntil BigInt
   playerMode      String @default("display")
+  teamName        String @default("")
+  teamLogo        String @default("")
   createdAt       BigInt
   updatedAt       BigInt
 
@@ -32,6 +34,7 @@ model Coach {
   scoreDimensions  ScoreDimension[]
   bonusRules       BonusRule[]
   shopItems        ShopItem[]
+  customIndicators CustomIndicator[]
 }
 
 model Player {
@@ -39,6 +42,7 @@ model Player {
   coachId        String
   name           String
   avatar         String @default("😊")
+  age            Int?
   currentPoints  Int @default(0)
   lifetimePoints Int @default(0)
   isActive       Boolean @default(true)
@@ -95,6 +99,18 @@ model ScoreIndicator {
   sortOrder     Int @default(0)
 
   dimension ScoreDimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+}
+
+model CustomIndicator {
+  id            String @id @default(uuid())
+  coachId       String
+  name          String
+  defaultPoints Int @default(5)
+  dailyLimit    Int @default(20)
+  isActive      Boolean @default(true)
+  sortOrder     Int @default(0)
+
+  coach Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
 }
 
 model ScoreRecord {
