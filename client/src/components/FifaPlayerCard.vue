@@ -1,5 +1,9 @@
 <template>
-  <div class="fifa-card" :class="`rating-${ratingTier}`" :style="{ background: cardBg }">
+  <div
+    class="fifa-card"
+    :class="[`rating-${ratingTier}`, { light: isLight }]"
+    :style="{ background: cardBg, color: textColor }"
+  >
     <div class="foil-shine"></div>
 
     <div class="card-top">
@@ -9,7 +13,7 @@
       </div>
       <div class="player-info">
         <span class="player-name">{{ stats.playerName }}</span>
-        <span class="player-points">积分 {{ stats.totalPoints }}</span>
+        <span class="player-points" :style="{ color: subTextColor }">积分 {{ stats.totalPoints }}</span>
       </div>
     </div>
 
@@ -19,6 +23,8 @@
         :size="140"
         :color="accentColor"
         :fill-color="accentFillColor"
+        :grid-color="isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)'"
+        :label-color="isLight ? '#666666' : '#9ca3af'"
       />
     </div>
 
@@ -26,7 +32,7 @@
       <div class="dim-bar" v-for="dim in stats.dimensions" :key="dim.dimensionId">
         <span class="dim-icon">{{ dim.icon }}</span>
         <span class="dim-name">{{ dim.dimensionName }}</span>
-        <div class="bar-track">
+        <div class="bar-track" :style="{ background: trackBg }">
           <div
             class="bar-fill"
             :style="{
@@ -35,17 +41,17 @@
             }"
           ></div>
         </div>
-        <span class="dim-score">{{ dim.score }}</span>
+        <span class="dim-score" :style="{ color: subTextColor }">{{ dim.score }}</span>
       </div>
     </div>
 
     <div class="card-stats">
-      <div class="stat">
-        <label>今日</label>
+      <div class="stat" :style="{ background: statBoxBg }">
+        <label :style="{ color: subTextColor }">今日</label>
         <span class="stat-value">+{{ stats.todayPoints }}</span>
       </div>
-      <div class="stat">
-        <label>周排名</label>
+      <div class="stat" :style="{ background: statBoxBg }">
+        <label :style="{ color: subTextColor }">周排名</label>
         <span class="stat-value">#{{ stats.rank }}</span>
       </div>
     </div>
@@ -59,6 +65,7 @@ import RadarChart from './RadarChart.vue'
 
 const props = defineProps<{
   stats: PlayerStats
+  theme?: 'dark' | 'light'
 }>()
 
 const ratingTier = computed<'gold' | 'silver' | 'bronze'>(() => {
@@ -66,6 +73,22 @@ const ratingTier = computed<'gold' | 'silver' | 'bronze'>(() => {
   if (props.stats.overall >= 70) return 'silver'
   return 'bronze'
 })
+
+const isLight = computed(() => props.theme === 'light')
+
+const cardBg = computed(() => {
+  if (isLight.value) return '#FFFFFF'
+  switch (ratingTier.value) {
+    case 'gold': return 'linear-gradient(135deg, #1a1a2e 0%, #2d1f0a 100%)'
+    case 'silver': return 'linear-gradient(135deg, #1a1a2e 0%, #1f2937 100%)'
+    case 'bronze': return 'linear-gradient(135deg, #1a1a2e 0%, #2a1f0f 100%)'
+  }
+})
+
+const textColor = computed(() => isLight.value ? '#333333' : '#FFFFFF')
+const subTextColor = computed(() => isLight.value ? '#666666' : '#9ca3af')
+const trackBg = computed(() => isLight.value ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.1)')
+const statBoxBg = computed(() => isLight.value ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.05)')
 
 const accentColor = computed(() => {
   switch (ratingTier.value) {
@@ -89,17 +112,6 @@ const accentFillColor = computed(() => {
   }
 })
 
-const cardBg = computed(() => {
-  switch (ratingTier.value) {
-    case 'gold':
-      return 'linear-gradient(135deg, #1a1a2e 0%, #2d1f0a 100%)'
-    case 'silver':
-      return 'linear-gradient(135deg, #1a1a2e 0%, #1f2937 100%)'
-    case 'bronze':
-      return 'linear-gradient(135deg, #1a1a2e 0%, #2a1f0f 100%)'
-  }
-})
-
 const radarDimensions = computed(() =>
   props.stats.dimensions.map((dim) => ({
     label: dim.icon + dim.dimensionName.charAt(0),
@@ -109,6 +121,11 @@ const radarDimensions = computed(() =>
 )
 
 function progressColor(score: number): string {
+  if (isLight.value) {
+    if (score >= 80) return 'linear-gradient(90deg, #4caf50, #66bb6a)'
+    if (score >= 60) return 'linear-gradient(90deg, #ff9800, #ffb74d)'
+    return 'linear-gradient(90deg, #f44336, #ef5350)'
+  }
   if (score >= 80) return 'linear-gradient(90deg, #FFD700, #FFA500)'
   if (score >= 60) return 'linear-gradient(90deg, #22c55e, #16a34a)'
   return 'linear-gradient(90deg, #3b82f6, #2563eb)'
@@ -288,5 +305,9 @@ function progressColor(score: number): string {
   font-size: 18px;
   font-weight: 700;
   margin-top: 2px;
+}
+
+.fifa-card.light {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 </style>
