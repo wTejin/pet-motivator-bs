@@ -1,15 +1,25 @@
 <template>
   <div class="team-header">
     <div class="team-brand">
-      <span class="team-logo">{{ logo || '⚽' }}</span>
-      <h1 class="team-name">{{ teamName }}</h1>
-    </div>
+    <img
+      v-if="logo && isImageLogo(logo)"
+      :src="logo"
+      class="team-logo-img"
+      alt="team logo"
+    />
+    <span v-else class="team-logo">{{ logo || '⚽' }}</span>
+    <h1 class="team-name">{{ teamName }}</h1>
+  </div>
     <ActivityTicker :activities="activities" />
   </div>
 </template>
 
 <script setup lang="ts">
 import ActivityTicker from './ActivityTicker.vue'
+
+function isImageLogo(logo: string): boolean {
+  return logo?.startsWith('/') ?? false
+}
 
 interface ActivityItem {
   id: string
@@ -47,6 +57,14 @@ defineProps<{
 
 .team-logo {
   font-size: 32px;
+}
+
+.team-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .team-name {

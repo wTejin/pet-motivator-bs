@@ -3,11 +3,33 @@
     <!-- 顶部栏 -->
     <TeamHeader
       :team-name="teamName"
+      :logo="teamLogo"
       :activities="activities"
     />
 
+    <!-- 无教练手机号时的入口 -->
+    <div v-if="!phone" class="entry-overlay">
+      <div class="entry-card">
+        <div class="entry-logo">⚽</div>
+        <h1 class="entry-title">星宠契约</h1>
+        <p class="entry-subtitle">输入教练手机号进入班级大屏</p>
+        <div class="entry-form">
+          <input
+            v-model="coachPhoneInput"
+            type="tel"
+            maxlength="11"
+            placeholder="请输入11位手机号"
+            class="entry-input"
+            @keyup.enter="enterScreen"
+          />
+          <button class="entry-btn" @click="enterScreen">进入大屏</button>
+        </div>
+        <router-link to="/login" class="entry-coach-link">🔐 教练员登录</router-link>
+      </div>
+    </div>
+
     <!-- 主体内容 -->
-    <div class="screen-body">
+    <div v-else class="screen-body">
       <!-- 左侧排名榜 -->
       <aside class="screen-sidebar">
         <RankingPanel :ranking="ranking" />
@@ -36,6 +58,13 @@
           />
         </div>
       </main>
+    </div>
+
+    <!-- 底部教练员入口 -->
+    <div class="coach-entry-bar">
+      <router-link to="/login" class="coach-entry-link">
+        🔐 教练员入口
+      </router-link>
     </div>
 
     <!-- Toast 提示 -->
@@ -98,6 +127,7 @@ const router = useRouter()
 
 const phone = route.query.c as string
 const teamName = ref('星宠小队')
+const teamLogo = ref('')
 const players = ref<PlayerInfo[]>([])
 const ranking = ref<RankingItem[]>([])
 const activities = ref<ActivityItem[]>([])
@@ -105,23 +135,32 @@ const loading = ref(true)
 const error = ref('')
 const isOpenMode = ref(true)
 const toastMsg = ref('')
+const coachPhoneInput = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | null = null
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
+function enterScreen() {
+  if (!coachPhoneInput.value || !/^\d{11}$/.test(coachPhoneInput.value)) {
+    showToast('请输入有效的11位手机号')
+    return
+  }
+  router.push(`/screen?c=${coachPhoneInput.value}`)
+}
+
 async function loadData() {
   if (!phone) {
-    error.value = '缺少教练手机号参数，请通过 ?c=手机号 访问'
     loading.value = false
     return
   }
 
   try {
-    const [playersRes, rankRes, actRes, modeRes] = await Promise.all([
+    const [playersRes, rankRes, actRes, modeRes, coachRes] = await Promise.all([
       publicApi.getPlayers(phone),
       publicApi.getLeaderboard(phone),
       publicApi.getActivities(phone),
       publicApi.getMode(phone).catch(() => ({ data: { success: false } })),
+      publicApi.getCoach(phone),
     ])
 
     if (playersRes.data.success) {
@@ -139,6 +178,14 @@ async function loadData() {
     }
 
     teamName.value = '星宠小队'
+
+    const coachData = coachRes.data.data
+    if (coachData?.teamName) {
+      teamName.value = coachData.teamName
+    }
+    if (coachData?.teamLogo) {
+      teamLogo.value = coachData.teamLogo
+    }
   } catch (e: any) {
     error.value = e.response?.data?.error || '加载失败，请检查网络'
   } finally {
@@ -261,6 +308,118 @@ onUnmounted(() => {
   .pet-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.coach-entry-bar {
+  text-align: center;
+  padding: 12px;
+}
+
+.coach-entry-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.coach-entry-link:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.entry-overlay {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.entry-card {
+  text-align: center;
+  padding: 40px 32px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-width: 380px;
+  width: 100%;
+}
+
+.entry-logo {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+
+.entry-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.entry-subtitle {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.entry-input {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: white;
+  font-size: 16px;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.entry-input:focus {
+  border-color: #42a5f5;
+}
+
+.entry-btn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.entry-btn:hover {
+  opacity: 0.9;
+}
+
+.entry-coach-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #888;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.entry-coach-link:hover {
+  color: #555;
 }
 
 .screen-toast {
