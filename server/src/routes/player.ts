@@ -82,6 +82,66 @@ publicRouter.get('/public/activities/:phone', async (req, res) => {
   res.json({ success: true, data })
 })
 
+publicRouter.get('/public/mode/:phone', async (req, res) => {
+  const phone = req.params.phone as string
+  const coach = await db.coach.findUnique({ where: { phone } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+  res.json({ success: true, data: { playerMode: coach.playerMode } })
+})
+
+publicRouter.get('/public/player-stats/:phone/:playerId', async (req, res) => {
+  const phone = req.params.phone as string
+  const playerId = req.params.playerId as string
+
+  const coach = await db.coach.findUnique({ where: { phone } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+
+  const player = await db.player.findFirst({ where: { id: playerId, coachId: coach.id } })
+  if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
+
+  const dimensions = await db.scoreDimension.findMany({
+    where: { coachId: coach.id, isActive: true },
+    include: { indicators: { where: { isActive: true } } },
+    orderBy: { sortOrder: 'asc' },
+  })
+
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0, 0, 0, 0)
+  const [todayScores, weekScores] = await Promise.all([
+    db.scoreRecord.aggregate({ where: { playerId, createdAt: { gte: todayStart.getTime() } }, _sum: { points: true } }),
+    db.scoreRecord.aggregate({ where: { playerId, createdAt: { gte: weekStart.getTime() } }, _sum: { points: true } }),
+  ])
+
+  const dimStats = await Promise.all(dimensions.map(async (dim) => {
+    const indicatorIds = dim.indicators.map(i => i.id)
+    const total = indicatorIds.length > 0 ? await db.scoreRecord.aggregate({
+      where: { playerId, indicatorId: { in: indicatorIds } }, _sum: { points: true },
+    }) : { _sum: { points: 0 } }
+    const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
+    const score = total._sum?.points || 0
+    return {
+      dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
+      score: Math.min(99, Math.round((score / Math.max(1, maxScore)) * 99)), maxScore,
+    }
+  }))
+
+  const overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
+  const allPlayers = await db.player.findMany({
+    where: { coachId: coach.id }, select: { id: true, currentPoints: true },
+    orderBy: { currentPoints: 'desc' },
+  })
+  const rank = allPlayers.findIndex(p => p.id === playerId) + 1
+
+  res.json({
+    success: true,
+    data: {
+      playerId, playerName: player.name, avatar: player.avatar, overall, dimensions: dimStats,
+      totalPoints: player.currentPoints, lifetimePoints: player.lifetimePoints,
+      todayPoints: todayScores._sum?.points || 0, weeklyPoints: weekScores._sum?.points || 0, rank,
+    },
+  })
+})
+
 // ===== 宠物 =====
 playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
   const playerId = req.params.playerId as string
@@ -101,6 +161,8 @@ playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
 
   const speciesDef = await db.petSpeciesDef.findUnique({ where: { id: pet.speciesId } })
 
+  const player = await db.player.findUnique({ where: { id: playerId }, select: { currentPoints: true } })
+
   res.json({
     success: true,
     data: {
@@ -108,6 +170,7 @@ playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
       lastDecayAt: Number(pet.lastDecayAt), lastFedAt: Number(pet.lastFedAt),
       lastPlayedAt: Number(pet.lastPlayedAt), createdAt: Number(pet.createdAt),
       evolvedAt: Number(pet.evolvedAt),
+      currentPoints: player?.currentPoints || 0,
       species: speciesDef ? { ...speciesDef, stages: JSON.parse(JSON.stringify(speciesDef.stages)) } : null,
     },
   })
