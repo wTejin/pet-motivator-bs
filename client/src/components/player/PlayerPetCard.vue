@@ -40,7 +40,7 @@ const props = defineProps<{
     speciesId: string
     species?: {
       stages: Record<string, { emoji: string; imageUrl?: string }>
-    }
+    } | null
     equippedDecorations?: string[]
   } | null
   accessories?: AccessoryItem[]

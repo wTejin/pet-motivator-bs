@@ -99,7 +99,7 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const [pRes, dRes] = await Promise.all([
+    const [pRes] = await Promise.all([
       coachApi.getPlayers(),
       coachApi.getDimensions(),
     ])

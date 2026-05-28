@@ -261,8 +261,7 @@ async function handleUseItem(inv: InventoryItem) {
       }
       actionMessage.value = `🍎 使用了 ${item.name}`
     } else if (item.type === 'decoration') {
-      const res = await publicApi.equipPlayerShopItem(playerId, inv.id)
-      const data = res.data.data
+      await publicApi.equipPlayerShopItem(playerId, inv.id)
       actionMessage.value = inv.isEquipped ? '👒 已卸下' : '🎩 已装备'
     } else {
       actionMessage.value = '✨ 物品已激活'

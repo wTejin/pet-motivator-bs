@@ -7,6 +7,12 @@
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@shared/*": ["../shared/*"]
+    },
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },

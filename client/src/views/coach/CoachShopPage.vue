@@ -76,6 +76,7 @@ interface ShopItem {
   price: number
   stock: number
   isActive: boolean
+  coachId?: string | null
   effect: any
 }
 
