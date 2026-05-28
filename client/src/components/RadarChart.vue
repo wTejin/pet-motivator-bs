@@ -17,12 +17,16 @@ const props = withDefaults(
     color?: string
     fillColor?: string
     animated?: boolean
+    gridColor?: string
+    labelColor?: string
   }>(),
   {
     size: 200,
     color: '#FFD700',
     fillColor: 'rgba(255, 215, 0, 0.2)',
     animated: true,
+    gridColor: 'rgba(255, 255, 255, 0.1)',
+    labelColor: '#9ca3af',
   },
 )
 
@@ -70,7 +74,7 @@ function draw(progress: number) {
       }
     }
     ctx.closePath()
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
+    ctx.strokeStyle = props.gridColor
     ctx.lineWidth = 1
     ctx.stroke()
   }
@@ -81,13 +85,13 @@ function draw(progress: number) {
     ctx.beginPath()
     ctx.moveTo(cx, cy)
     ctx.lineTo(x, y)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+    ctx.strokeStyle = props.gridColor
     ctx.lineWidth = 1
     ctx.stroke()
   }
 
   // Labels at end of each axis
-  ctx.fillStyle = '#9ca3af'
+  ctx.fillStyle = props.labelColor
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
