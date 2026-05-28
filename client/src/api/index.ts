@@ -181,4 +181,10 @@ export const publicApi = {
   getActivities(phone: string) {
     return api.get(`/public/activities/${phone}`)
   },
+  getMode(phone: string) {
+    return api.get(`/public/mode/${phone}`)
+  },
+  getPlayerStats(phone: string, playerId: string) {
+    return api.get(`/public/player-stats/${phone}/${playerId}`)
+  },
 }
