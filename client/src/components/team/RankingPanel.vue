@@ -9,7 +9,13 @@
         :class="`rank-${item.rank}`"
       >
         <span class="rank-medal">{{ medal(item.rank) }}</span>
-        <span class="rank-avatar">{{ item.playerAvatar }}</span>
+        <img
+          v-if="isImageAvatar(item.playerAvatar)"
+          :src="item.playerAvatar"
+          class="rank-avatar-img"
+          alt="avatar"
+        />
+        <span v-else class="rank-avatar">{{ item.playerAvatar }}</span>
         <div class="rank-info">
           <span class="rank-name">{{ item.playerName }}</span>
           <span class="rank-points">{{ item.currentPoints }} ⭐</span>
@@ -37,6 +43,10 @@ function medal(rank: number): string {
   if (rank === 2) return '🥈'
   if (rank === 3) return '🥉'
   return `${rank}.`
+}
+
+function isImageAvatar(avatar: string): boolean {
+  return avatar?.startsWith('/') ?? false
 }
 </script>
 
@@ -89,6 +99,13 @@ function medal(rank: number): string {
 
 .rank-avatar {
   font-size: 24px;
+  flex-shrink: 0;
+}
+
+.rank-avatar-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 

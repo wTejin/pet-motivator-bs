@@ -1,0 +1,37 @@
+/* Coach端浅色主题覆盖 —— 在 CoachLayout 下生效 */
+
+.coach-layout .glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1rem;
+}
+
+.coach-layout .input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.75rem;
+  color: #333;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.coach-layout .input-field:focus {
+  border-color: #42a5f5;
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15);
+}
+
+.coach-layout .input-field::placeholder {
+  color: #aaa;
+}
+
+.coach-layout h2 {
+  color: #1a1a2e;
+}
+
+.coach-layout h3 {
+  color: #333;
+}

@@ -2,12 +2,26 @@
   <div class="fifa-card" :class="[`rating-${ratingTier}`, { 'on-light': isLight }]" :style="{ borderColor: accentColor }">
     <div class="foil-shine"></div>
 
+    <div class="card-header">
+      <div class="header-name">{{ stats.playerName }}</div>
+      <div class="header-meta">
+        <span v-if="stats.age != null" class="meta-age">{{ stats.age }}岁</span>
+        <span class="meta-overall" :style="{ color: accentColor }">{{ stats.overall }}</span>
+      </div>
+    </div>
+
     <div class="card-main">
       <!-- Left column: photo frame + radar -->
       <div class="card-left">
         <div class="photo-frame" :style="{ background: frameGradient }">
           <div class="frame-inner">
-            <div class="player-avatar">{{ stats.avatar }}</div>
+            <img
+              v-if="isImageAvatar(stats.avatar)"
+              :src="stats.avatar"
+              class="player-avatar-img"
+              alt="avatar"
+            />
+            <div v-else class="player-avatar">{{ stats.avatar }}</div>
           </div>
           <div class="frame-stud top"></div>
           <div class="frame-stud bottom"></div>
@@ -110,6 +124,10 @@ function scoreColor(score: number): string {
   if (score >= 60) return '#ffffff'
   return '#9ca3af'
 }
+
+function isImageAvatar(avatar: string): boolean {
+  return avatar.startsWith('/')
+}
 </script>
 
 <style scoped>
@@ -128,6 +146,45 @@ function scoreColor(score: number): string {
 
 .fifa-card.on-light {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.header-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.meta-age {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.meta-overall {
+  font-family: 'Russo One', sans-serif;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .rating-gold {
@@ -254,6 +311,12 @@ function scoreColor(score: number): string {
   font-size: 64px;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.player-avatar-img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
 }
 
 .radar-wrap {

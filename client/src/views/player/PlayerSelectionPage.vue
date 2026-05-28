@@ -38,7 +38,13 @@
           class="glass-card p-4 cursor-pointer hover:bg-white/10 hover:-translate-y-1 transition-all flex flex-col items-center gap-2 pet-card-glow"
           @click="selectPlayer(player.id)"
         >
-          <span class="text-4xl">{{ player.avatar || '🥚' }}</span>
+          <img
+            v-if="isImageAvatar(player.avatar)"
+            :src="player.avatar"
+            class="w-10 h-10 object-contain"
+            alt="avatar"
+          />
+          <span v-else class="text-4xl">{{ player.avatar || '🥚' }}</span>
           <span class="font-semibold text-white text-sm">{{ player.name }}</span>
           <span
             v-if="player.pet"
@@ -119,6 +125,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+function isImageAvatar(avatar: string): boolean {
+  return avatar?.startsWith('/') ?? false
+}
 
 function stageLabel(stage: string): string {
   const map: Record<string, string> = { egg: '蛋', baby: '幼崽', teen: '青少年', adult: '成年', rare: '稀有' }

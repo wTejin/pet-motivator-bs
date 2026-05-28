@@ -5,22 +5,11 @@
     <!-- View Toggle -->
     <div class="flex gap-2">
       <button
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-          viewMode === 'grid' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
-        ]"
-        @click="viewMode = 'grid'"
+        class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+        :class="viewMode === 'compare' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10'"
+        @click="viewMode = viewMode === 'grid' ? 'compare' : 'grid'"
       >
-        网格视图
-      </button>
-      <button
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-          viewMode === 'compare' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
-        ]"
-        @click="viewMode = 'compare'"
-      >
-        对比视图
+        {{ viewMode === 'grid' ? '🔍 对比模式' : '🔙 返回全部' }}
       </button>
     </div>
 
@@ -57,7 +46,14 @@
             ]"
             @click="toggleCompare(player.id)"
           >
-            {{ player.avatar }} {{ player.name }}
+            <img
+              v-if="isImageAvatar(player.avatar)"
+              :src="player.avatar"
+              class="compare-avatar-img"
+              alt="avatar"
+            />
+            <span v-else>{{ player.avatar }}</span>
+            <span>{{ player.name }}</span>
           </button>
         </div>
         <p v-if="compareIds.length >= 4" class="text-xs text-[#FFD700] mt-2">已达到最大对比数量</p>
@@ -125,6 +121,10 @@ onMounted(async () => {
   }
 })
 
+function isImageAvatar(avatar: string): boolean {
+  return avatar.startsWith('/')
+}
+
 function toggleCompare(id: string) {
   const idx = compareIds.value.indexOf(id)
   if (idx >= 0) {
@@ -134,3 +134,12 @@ function toggleCompare(id: string) {
   }
 }
 </script>
+
+<style scoped>
+.compare-avatar-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+</style>

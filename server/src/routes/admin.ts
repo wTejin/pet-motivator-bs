@@ -137,3 +137,64 @@ adminRouter.post('/backgrounds', authenticate, requireRole('admin'), async (req:
   }
   res.json({ success: true, data: { count: backgrounds.length } })
 })
+
+// ---------- 魔法集市 ----------
+
+adminRouter.get('/shop-items', authenticate, requireRole('admin'), async (_req: AuthRequest, res: Response) => {
+  const items = await db.shopItem.findMany({
+    where: { coachId: null },
+    orderBy: { sortOrder: 'asc' },
+  })
+  res.json({ success: true, data: items.map(i => ({ ...i, effect: JSON.parse(JSON.stringify(i.effect)) })) })
+})
+
+adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const { name, description, type, price, stock, effect, imageClass, sortOrder } = req.body
+  if (!name || !type || price == null) {
+    return res.status(400).json({ success: false, error: '名称、类型、价格必填' })
+  }
+  const now = Date.now()
+  const item = await db.shopItem.create({
+    data: {
+      name,
+      description: description || '',
+      type,
+      price: Number(price),
+      stock: stock != null ? Number(stock) : 999,
+      effect: effect || {},
+      imageClass: imageClass || '',
+      sortOrder: sortOrder != null ? Number(sortOrder) : 0,
+      createdAt: now,
+    },
+  })
+  res.json({ success: true, data: item })
+})
+
+adminRouter.put('/shop-items/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const { name, description, type, price, stock, effect, imageClass, sortOrder, isActive } = req.body
+  const existing = await db.shopItem.findUnique({ where: { id } })
+  if (!existing) return res.status(404).json({ success: false, error: '商品不存在' })
+
+  const updateData: any = {}
+  if (name !== undefined) updateData.name = name
+  if (description !== undefined) updateData.description = description
+  if (type !== undefined) updateData.type = type
+  if (price !== undefined) updateData.price = Number(price)
+  if (stock !== undefined) updateData.stock = Number(stock)
+  if (effect !== undefined) updateData.effect = effect
+  if (imageClass !== undefined) updateData.imageClass = imageClass
+  if (sortOrder !== undefined) updateData.sortOrder = Number(sortOrder)
+  if (isActive !== undefined) updateData.isActive = isActive
+
+  const updated = await db.shopItem.update({ where: { id }, data: updateData })
+  res.json({ success: true, data: updated })
+})
+
+adminRouter.delete('/shop-items/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const existing = await db.shopItem.findUnique({ where: { id } })
+  if (!existing) return res.status(404).json({ success: false, error: '商品不存在' })
+  await db.shopItem.delete({ where: { id } })
+  res.json({ success: true, message: '已删除' })
+})

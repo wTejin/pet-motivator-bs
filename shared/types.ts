@@ -15,7 +15,7 @@ export interface PetBackgroundDef { id: string; name: string; cssGradient: strin
 
 export interface Admin { id: string; username: string; passwordHash: string; createdAt: number }
 export interface Coach { id: string; phone: string; passwordHash: string; name: string; school: string; isActive: boolean; trialUntil: number; authorizedUntil: number; playerMode: PlayerModeType; createdAt: number; updatedAt: number }
-export interface Player { id: string; coachId: string; name: string; avatar: string; currentPoints: number; lifetimePoints: number; isActive: boolean; createdAt: number; updatedAt: number }
+export interface Player { id: string; coachId: string; name: string; avatar: string; age?: number | null; currentPoints: number; lifetimePoints: number; isActive: boolean; createdAt: number; updatedAt: number }
 export interface Pet { id: string; playerId: string; speciesId: string; name: string; stage: PetStage; carePoints: number; level: number; hunger: number; mood: number; currentSkin: string; equippedDecorations: string[]; lastDecayAt: number; lastFedAt: number; lastPlayedAt: number; createdAt: number; evolvedAt: number }
 export interface ScoreDimension { id: string; coachId: string; name: string; icon: string; sortOrder: number; isActive: boolean }
 export interface ScoreIndicator { id: string; dimensionId: string; name: string; criteria: string; defaultPoints: number; dailyLimit: number; isActive: boolean; sortOrder: number }
@@ -34,7 +34,7 @@ export interface ScoreInput { playerId: string; indicatorId?: string | null; poi
 export interface CreateDimensionInput { name: string; icon: string; sortOrder?: number }
 export interface CreateIndicatorInput { dimensionId: string; name: string; criteria: string; defaultPoints: number; dailyLimit: number; sortOrder?: number }
 export interface PlayerStats {
-  playerId: string; playerName: string; avatar: string; overall: number
+  playerId: string; playerName: string; avatar: string; age: number | null; overall: number
   dimensions: {
     dimensionId: string; dimensionName: string; icon: string; score: number; maxScore: number
     indicators: { indicatorId: string; indicatorName: string; score: number }[]

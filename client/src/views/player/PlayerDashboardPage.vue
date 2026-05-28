@@ -89,6 +89,28 @@
             </div>
           </div>
 
+          <!-- Score Records -->
+          <div class="records-panel">
+            <div class="records-header">
+              <span class="records-title">📋 得分记录</span>
+              <span v-if="records.length" class="records-count">最近 {{ records.length }} 条</span>
+            </div>
+            <div v-if="records.length" class="records-list">
+              <div
+                v-for="record in records.slice(0, 15)"
+                :key="record.id"
+                class="record-item"
+              >
+                <span class="record-reason">{{ record.reason }}</span>
+                <span class="record-points" :class="record.points > 0 ? 'plus' : 'minus'"
+                  >{{ record.points > 0 ? '+' : '' }}{{ record.points }}</span
+                >
+                <span class="record-time">{{ formatTime(record.createdAt) }}</span>
+              </div>
+            </div>
+            <div v-else class="records-empty">暂无得分记录</div>
+          </div>
+
           <div class="market-panel">
             <div class="market-header">
               <span class="market-title">🎒 魔法集市</span>
@@ -177,11 +199,20 @@ interface ShopItemDef {
   type: 'food' | 'decoration' | 'special'
 }
 
+interface ScoreRecord {
+  id: string
+  reason: string
+  points: number
+  type: string
+  createdAt: number
+}
+
 const pet = ref<PetData | null>(null)
 const playerStats = ref<PlayerStats | null>(null)
 const currentPoints = ref(0)
 const inventory = ref<InventoryItem[]>([])
 const shopItems = ref<ShopItemDef[]>([])
+const records = ref<ScoreRecord[]>([])
 const loading = ref(true)
 const error = ref('')
 const actionMessage = ref('')
@@ -194,9 +225,10 @@ async function loadData() {
   coachPhone.value = route.query.c as string || ''
 
   try {
-    const [petRes, shopRes] = await Promise.all([
+    const [petRes, shopRes, recordsRes] = await Promise.all([
       publicApi.getPlayerPet(playerId),
       publicApi.getPlayerShop(playerId).catch(() => null),
+      publicApi.getPlayerRecords(playerId).catch(() => null),
     ])
 
     pet.value = petRes.data.data
@@ -210,6 +242,10 @@ async function loadData() {
         emoji: i.emoji || (i.type === 'food' ? '🍎' : i.type === 'decoration' ? '🎩' : '✨'),
         type: i.type,
       }))
+    }
+
+    if (recordsRes?.data?.success) {
+      records.value = recordsRes.data.data || []
     }
 
     if (coachPhone.value) {
@@ -279,6 +315,20 @@ async function handleUseItem(inv: InventoryItem) {
 }
 
 function retry() { loadData() }
+
+function formatTime(ts: number): string {
+  const now = Date.now()
+  const diff = now - ts
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
 onMounted(loadData)
 
 function hungerGradient(v: number): string {
@@ -602,6 +652,94 @@ async function handlePlay() {
 
 .points-star {
   font-size: 20px;
+}
+
+/* ===== Records Panel ===== */
+.records-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+}
+
+.records-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.records-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+}
+
+.records-count {
+  font-size: 11px;
+  color: #999;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  font-size: 13px;
+}
+
+.record-reason {
+  flex: 1;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.record-points {
+  font-weight: 700;
+  font-family: 'Russo One', sans-serif;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.record-points.plus {
+  color: #16a34a;
+}
+
+.record-points.minus {
+  color: #dc2626;
+}
+
+.record-time {
+  font-size: 11px;
+  color: #999;
+  flex-shrink: 0;
+  width: 60px;
+  text-align: right;
+}
+
+.records-empty {
+  text-align: center;
+  font-size: 13px;
+  color: #999;
+  padding: 12px 0;
 }
 
 /* ===== Market Panel (Right Bottom) ===== */

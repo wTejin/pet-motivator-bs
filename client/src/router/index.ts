@@ -5,12 +5,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/join',
-    },
-    {
-      path: '/join',
-      name: 'playerSelection',
-      component: () => import('@/views/player/PlayerSelectionPage.vue'),
+      redirect: '/screen',
     },
     {
       path: '/player/:playerId',
@@ -36,13 +31,12 @@ const router = createRouter({
       path: '/coach',
       component: () => import('@/views/coach/CoachLayout.vue'),
       children: [
-        { path: '', redirect: '/coach/dashboard' },
-        { path: 'dashboard', name: 'coachDashboard', component: () => import('@/views/coach/CoachDashboardPage.vue') },
+        { path: '', redirect: '/coach/score' },
         { path: 'score', name: 'coachScore', component: () => import('@/views/coach/CoachScorePage.vue') },
         { path: 'score-config', name: 'coachScoreConfig', component: () => import('@/views/coach/CoachScoreConfigPage.vue') },
         { path: 'players', name: 'coachPlayers', component: () => import('@/views/coach/CoachPlayersPage.vue') },
         { path: 'player-cards', name: 'coachPlayerCards', component: () => import('@/views/coach/CoachPlayerCardsPage.vue') },
-        { path: 'shop', name: 'coachShop', component: () => import('@/views/coach/CoachShopPage.vue') },
+        { path: 'shop', redirect: '/coach/score' },
       ],
     },
     {
@@ -57,6 +51,7 @@ const router = createRouter({
         { path: '', redirect: '/admin/dashboard' },
         { path: 'dashboard', name: 'adminDashboard', component: () => import('@/views/admin/AdminDashboardPage.vue') },
         { path: 'coaches', name: 'adminCoaches', component: () => import('@/views/admin/AdminCoachesPage.vue') },
+        { path: 'shop', name: 'adminShop', component: () => import('@/views/admin/AdminShopPage.vue') },
       ],
     },
   ],

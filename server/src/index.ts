@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
 import { config } from './config'
 
 // BigInt JSON 序列化修复（Prisma 返回 BigInt 字段）
@@ -14,6 +15,10 @@ const app = express()
 
 app.use(cors())
 app.use(express.json({ limit: '10mb' }))
+
+// Static files for uploaded avatars and team logos
+app.use('/avatars', express.static(path.join(__dirname, '../public/avatars')))
+app.use('/logos', express.static(path.join(__dirname, '../../client/public/logos')))
 
 app.use('/api', publicRouter)
 app.use('/api/admin', adminRouter)

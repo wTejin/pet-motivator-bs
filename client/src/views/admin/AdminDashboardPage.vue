@@ -40,6 +40,16 @@
             <div class="text-sm text-white/50">管理教练账号、授权、启用/停用</div>
           </div>
         </router-link>
+        <router-link
+          to="/admin/shop"
+          class="glass-card p-6 hover:bg-white/10 hover:-translate-y-1 transition-all flex items-center gap-4"
+        >
+          <span class="text-3xl">🏪</span>
+          <div>
+            <div class="font-semibold text-lg">魔法集市</div>
+            <div class="text-sm text-white/50">管理食物、配饰、背景、魔法四类商品</div>
+          </div>
+        </router-link>
       </div>
     </template>
   </div>
