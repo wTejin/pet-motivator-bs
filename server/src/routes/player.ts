@@ -89,6 +89,36 @@ publicRouter.get('/public/mode/:phone', async (req, res) => {
   res.json({ success: true, data: { playerMode: coach.playerMode } })
 })
 
+publicRouter.get('/public/dimensions/:phone', async (req, res) => {
+  const phone = req.params.phone as string
+  const coach = await db.coach.findUnique({ where: { phone } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+
+  const dimensions = await db.scoreDimension.findMany({
+    where: { coachId: coach.id, isActive: true },
+    include: { indicators: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } },
+    orderBy: { sortOrder: 'asc' },
+  })
+
+  res.json({
+    success: true,
+    data: dimensions.map(d => ({
+      id: d.id,
+      name: d.name,
+      icon: d.icon,
+      sortOrder: d.sortOrder,
+      indicators: d.indicators.map(i => ({
+        id: i.id,
+        name: i.name,
+        criteria: i.criteria,
+        defaultPoints: i.defaultPoints,
+        dailyLimit: i.dailyLimit,
+        sortOrder: i.sortOrder,
+      })),
+    })),
+  })
+})
+
 publicRouter.get('/public/player-stats/:phone/:playerId', async (req, res) => {
   const phone = req.params.phone as string
   const playerId = req.params.playerId as string

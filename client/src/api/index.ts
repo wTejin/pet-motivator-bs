@@ -187,4 +187,7 @@ export const publicApi = {
   getPlayerStats(phone: string, playerId: string) {
     return api.get(`/public/player-stats/${phone}/${playerId}`)
   },
+  getDimensions(phone: string) {
+    return api.get(`/public/dimensions/${phone}`)
+  },
 }
