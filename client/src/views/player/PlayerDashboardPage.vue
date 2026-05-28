@@ -71,13 +71,17 @@
 
         <!-- Right: Actions + Magic Market -->
         <section class="right-section">
+          <div v-if="isDisplayMode" class="display-warning">
+            <p>🔒 教练已关闭操作权限，当前仅可查看</p>
+          </div>
+
           <div class="action-panel">
             <div class="actions">
-              <button class="action-btn action-feed" @click="handleFeed">
+              <button class="action-btn action-feed" :disabled="isDisplayMode" @click="handleFeed">
                 <span class="btn-icon">🍖</span>
                 <span class="btn-label">喂食</span>
               </button>
-              <button class="action-btn action-play" @click="handlePlay">
+              <button class="action-btn action-play" :disabled="isDisplayMode" @click="handlePlay">
                 <span class="btn-icon">🎾</span>
                 <span class="btn-label">训练</span>
               </button>
@@ -123,8 +127,8 @@
                 v-for="inv in inventory"
                 :key="inv.id"
                 class="market-item"
-                :class="{ equipped: inv.isEquipped, usable: isUsable(inv) }"
-                @click="handleUseItem(inv)"
+                :class="{ equipped: inv.isEquipped, usable: isUsable(inv) && !isDisplayMode, disabled: isDisplayMode }"
+                @click="!isDisplayMode && handleUseItem(inv)"
               >
                 <span class="item-emoji">{{ getItemEmoji(inv.itemId) }}</span>
                 <span class="item-name">{{ getItemName(inv.itemId) }}</span>
@@ -218,6 +222,7 @@ const error = ref('')
 const actionMessage = ref('')
 const actionError = ref('')
 const coachPhone = ref('')
+const isDisplayMode = ref(false)
 
 async function loadData() {
   loading.value = true
@@ -250,12 +255,18 @@ async function loadData() {
 
     if (coachPhone.value) {
       try {
-        const statsRes = await publicApi.getPlayerStats(coachPhone.value, playerId)
-        if (statsRes.data.success) {
+        const [statsRes, modeRes] = await Promise.all([
+          publicApi.getPlayerStats(coachPhone.value, playerId).catch(() => null),
+          publicApi.getMode(coachPhone.value).catch(() => null),
+        ])
+        if (statsRes?.data?.success) {
           playerStats.value = statsRes.data.data
         }
+        if (modeRes?.data?.success) {
+          isDisplayMode.value = modeRes.data.data?.playerMode === 'display'
+        }
       } catch (e) {
-        console.warn('Failed to load player stats', e)
+        console.warn('Failed to load player stats or mode', e)
       }
     }
   } catch (e: any) {
@@ -942,5 +953,35 @@ async function handlePlay() {
   .pet-display-large {
     transform: scale(1.1);
   }
+}
+
+/* Display mode warning */
+.display-warning {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.display-warning p {
+  margin: 0;
+  font-size: 13px;
+  color: #c62828;
+  font-weight: 600;
+}
+
+/* Disabled action buttons */
+.action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+/* Disabled market items */
+.market-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 </style>

@@ -31,6 +31,15 @@
         </router-link>
       </div>
       <div class="nav-actions">
+        <button
+          class="mode-toggle"
+          :class="auth.playerMode === 'open' ? 'mode-open' : 'mode-display'"
+          @click="togglePlayerMode"
+          :title="auth.playerMode === 'open' ? '点击切换为仅展示' : '点击切换为允许操作'"
+        >
+          <span class="mode-icon">{{ auth.playerMode === 'open' ? '🔓' : '🔒' }}</span>
+          <span class="mode-label">{{ auth.playerMode === 'open' ? '允许操作' : '仅展示' }}</span>
+        </button>
         <span class="nav-name hidden sm:inline">{{ auth.user?.name }}</span>
         <button class="nav-logout" @click="auth.logout()">退出</button>
       </div>
@@ -179,6 +188,15 @@ async function saveTeam() {
     showTeamEdit.value = false
   } catch (e: any) {
     alert(e.response?.data?.error || '保存失败')
+  }
+}
+
+async function togglePlayerMode() {
+  const newMode = auth.playerMode === 'open' ? 'display' : 'open'
+  try {
+    await auth.setMode(newMode)
+  } catch (e: any) {
+    alert(e.response?.data?.error || '切换失败')
   }
 }
 </script>
@@ -522,5 +540,45 @@ async function saveTeam() {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+/* Mode toggle */
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.mode-toggle.mode-open {
+  background: rgba(76, 175, 80, 0.12);
+  color: #2e7d32;
+}
+.mode-toggle.mode-open:hover {
+  background: rgba(76, 175, 80, 0.2);
+}
+.mode-toggle.mode-display {
+  background: rgba(239, 68, 68, 0.1);
+  color: #c62828;
+}
+.mode-toggle.mode-display:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+.mode-icon {
+  font-size: 14px;
+}
+.mode-label {
+  display: none;
+}
+@media (min-width: 640px) {
+  .mode-label {
+    display: inline;
+  }
 }
 </style>
