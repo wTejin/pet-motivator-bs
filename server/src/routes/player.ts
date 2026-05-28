@@ -89,6 +89,21 @@ publicRouter.get('/public/mode/:phone', async (req, res) => {
   res.json({ success: true, data: { playerMode: coach.playerMode } })
 })
 
+publicRouter.get('/public/coach/:phone', async (req, res) => {
+  const phone = req.params.phone as string
+  const coach = await db.coach.findUnique({ where: { phone } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+  res.json({
+    success: true,
+    data: {
+      phone: coach.phone,
+      name: coach.name,
+      teamName: coach.teamName,
+      teamLogo: coach.teamLogo,
+    },
+  })
+})
+
 publicRouter.get('/public/dimensions/:phone', async (req, res) => {
   const phone = req.params.phone as string
   const coach = await db.coach.findUnique({ where: { phone } })
@@ -474,6 +489,25 @@ publicRouter.get('/public/player/:playerId/shop', handleGetShop)
 publicRouter.post('/public/player/:playerId/shop/buy', handleBuy)
 publicRouter.put('/public/player/:playerId/shop/equip', handleEquip)
 publicRouter.post('/public/player/:playerId/shop/use', handleUse)
+publicRouter.get('/public/player/:playerId/records', async (req, res) => {
+  const playerId = req.params.playerId as string
+  const records = await db.scoreRecord.findMany({
+    where: { playerId },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+  res.json({
+    success: true,
+    data: records.map(r => ({
+      id: r.id,
+      reason: r.reason,
+      points: r.points,
+      type: r.type,
+      createdAt: Number(r.createdAt),
+    })),
+  })
+})
+
 publicRouter.get('/public/player/:playerId/leaderboard', handleLeaderboard)
 
 // ===== 辅助 =====

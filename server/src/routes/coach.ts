@@ -1,5 +1,7 @@
 import { Router, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
+import multer from 'multer'
+import path from 'path'
 import { hashPassword, verifyPassword, signToken } from '../services/auth'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { config, getDefaultPassword } from '../config'
@@ -7,12 +9,33 @@ import { config, getDefaultPassword } from '../config'
 const db = new PrismaClient()
 export const coachRouter = Router()
 
+const avatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, path.join(__dirname, '../../public/avatars'))
+  },
+  filename: (_req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9)
+    const ext = path.extname(file.originalname) || '.jpg'
+    cb(null, `avatar-${unique}${ext}`)
+  },
+})
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (allowed.includes(file.mimetype)) cb(null, true)
+    else cb(new Error('仅支持 JPG/PNG/GIF/WebP 图片'))
+  },
+})
+
 function coachId(req: AuthRequest): string { return req.userId! }
 
 // ---------- 注册 & 登录 ----------
 
 coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
-  const { phone } = req.body
+  const { phone, password } = req.body
   if (!phone || !/^\d{11}$/.test(phone)) {
     return res.status(400).json({ success: false, error: '请输入有效的11位手机号' })
   }
@@ -21,15 +44,94 @@ coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
 
   const now = Date.now()
   const trialUntil = now + config.trialDays * 24 * 3600 * 1000
+  const passwordHash = await hashPassword(password && password.length >= 6 ? password : getDefaultPassword(phone))
   const coach = await db.coach.create({
     data: {
-      phone, passwordHash: await hashPassword(getDefaultPassword(phone)),
+      phone, passwordHash,
       name: phone, trialUntil, authorizedUntil: trialUntil,
       createdAt: now, updatedAt: now,
     },
   })
+
+  await seedDefaultTemplate(coach.id, now)
+
   res.json({ success: true, data: { id: coach.id, phone: coach.phone, name: coach.name } })
 })
+
+async function seedDefaultTemplate(coachId: string, now: number) {
+  const dimensions = [
+    { name: '技术能力', icon: '⚽', indicators: [
+      { name: '传接球稳定性', criteria: '连续5脚以上不失误', defaultPoints: 5, dailyLimit: 20 },
+      { name: '盘带成功率', criteria: '1对1突破成功率', defaultPoints: 5, dailyLimit: 20 },
+      { name: '射门精度', criteria: '射门命中目标区域', defaultPoints: 5, dailyLimit: 20 },
+      { name: '控球能力', criteria: '狭小空间内护球', defaultPoints: 5, dailyLimit: 20 },
+    ]},
+    { name: '战术洞察', icon: '👁️', indicators: [
+      { name: '抬头观察', criteria: '接球前观察场上局势', defaultPoints: 5, dailyLimit: 20 },
+      { name: '关键传球', criteria: '创造得分机会的传球', defaultPoints: 10, dailyLimit: 20 },
+      { name: '跑位意识', criteria: '无球跑动制造空间', defaultPoints: 5, dailyLimit: 20 },
+      { name: '防守预判', criteria: '提前切断传球线路', defaultPoints: 5, dailyLimit: 20 },
+    ]},
+    { name: '身体素质', icon: '💪', indicators: [
+      { name: '冲刺速度', criteria: '30米冲刺表现', defaultPoints: 5, dailyLimit: 20 },
+      { name: '爆发力', criteria: '起步加速能力', defaultPoints: 5, dailyLimit: 20 },
+      { name: '耐力', criteria: '全场持续跑动能力', defaultPoints: 5, dailyLimit: 20 },
+      { name: '柔韧性', criteria: '拉伸和关节活动度', defaultPoints: 5, dailyLimit: 20 },
+    ]},
+    { name: '心理素质', icon: '🧠', indicators: [
+      { name: '抗压能力', criteria: '落后或失误后的表现', defaultPoints: 5, dailyLimit: 20 },
+      { name: '专注力', criteria: '训练中不分心', defaultPoints: 5, dailyLimit: 20 },
+      { name: '自信心', criteria: '敢于做动作和决策', defaultPoints: 5, dailyLimit: 20 },
+      { name: '情绪管理', criteria: '控制情绪不抱怨', defaultPoints: 5, dailyLimit: 20 },
+    ]},
+    { name: '团队协作', icon: '🤝', indicators: [
+      { name: '沟通配合', criteria: '场上语言和非语言沟通', defaultPoints: 5, dailyLimit: 20 },
+      { name: '无私传球', criteria: '为队友创造机会', defaultPoints: 5, dailyLimit: 20 },
+      { name: '补位协防', criteria: '队友失位时及时补位', defaultPoints: 5, dailyLimit: 20 },
+      { name: '鼓励队友', criteria: '积极正面的团队氛围', defaultPoints: 5, dailyLimit: 20 },
+    ]},
+    { name: '比赛态度', icon: '🔥', indicators: [
+      { name: '拼搏精神', criteria: '不放弃每一个球', defaultPoints: 5, dailyLimit: 20 },
+      { name: '遵守纪律', criteria: '服从教练安排', defaultPoints: 5, dailyLimit: 20 },
+      { name: '尊重裁判', criteria: '不对判罚抱怨', defaultPoints: 5, dailyLimit: 20 },
+      { name: '积极热身', criteria: '热身认真不敷衍', defaultPoints: 5, dailyLimit: 20 },
+    ]},
+  ]
+
+  for (let di = 0; di < dimensions.length; di++) {
+    const dim = dimensions[di]
+    const createdDim = await db.scoreDimension.create({
+      data: { coachId, name: dim.name, icon: dim.icon, sortOrder: di },
+    })
+    for (let ii = 0; ii < dim.indicators.length; ii++) {
+      const ind = dim.indicators[ii]
+      await db.scoreIndicator.create({
+        data: {
+          dimensionId: createdDim.id,
+          name: ind.name,
+          criteria: ind.criteria,
+          defaultPoints: ind.defaultPoints,
+          dailyLimit: ind.dailyLimit,
+          sortOrder: ii,
+        },
+      })
+    }
+  }
+
+  const bonusRules = [
+    { name: '全勤奖', points: 50, frequency: 'weekly', criteria: '本周训练全部到场' },
+    { name: '周最佳球员', points: 30, frequency: 'weekly', criteria: '本周综合表现最佳' },
+    { name: '月度进步奖', points: 100, frequency: 'monthly', criteria: '本月进步幅度最大' },
+    { name: '团队贡献奖', points: 50, frequency: 'weekly', criteria: '为团队做出突出贡献' },
+    { name: '拼搏奖', points: 20, frequency: 'weekly', criteria: '训练中表现出顽强拼搏精神' },
+  ]
+
+  for (const rule of bonusRules) {
+    await db.bonusRule.create({
+      data: { coachId, name: rule.name, points: rule.points, frequency: rule.frequency, criteria: rule.criteria },
+    })
+  }
+}
 
 coachRouter.post('/login', async (req: AuthRequest, res: Response) => {
   const { phone, password } = req.body
@@ -49,6 +151,8 @@ coachRouter.post('/login', async (req: AuthRequest, res: Response) => {
       token,
       coach: {
         id: coach.id, phone: coach.phone, name: coach.name, school: coach.school,
+        teamName: coach.teamName,
+        teamLogo: coach.teamLogo,
         playerMode: coach.playerMode,
         trialUntil: Number(coach.trialUntil),
         authorizedUntil: Number(coach.authorizedUntil),
@@ -70,6 +174,53 @@ coachRouter.put('/password', authenticate, requireRole('coach'), async (req: Aut
   res.json({ success: true, message: '密码修改成功' })
 })
 
+coachRouter.get('/me', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const coach = await db.coach.findUnique({ where: { id: coachId(req) } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+  res.json({
+    success: true,
+    data: {
+      id: coach.id,
+      phone: coach.phone,
+      name: coach.name,
+      school: coach.school,
+      teamName: coach.teamName,
+      teamLogo: coach.teamLogo,
+      playerMode: coach.playerMode,
+      trialUntil: Number(coach.trialUntil),
+      authorizedUntil: Number(coach.authorizedUntil),
+    },
+  })
+})
+
+coachRouter.put('/me', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const { name, school, teamName, teamLogo } = req.body
+  const updated = await db.coach.update({
+    where: { id: coachId(req) },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(school !== undefined && { school }),
+      ...(teamName !== undefined && { teamName }),
+      ...(teamLogo !== undefined && { teamLogo }),
+      updatedAt: Date.now(),
+    },
+  })
+  res.json({
+    success: true,
+    data: {
+      id: updated.id,
+      phone: updated.phone,
+      name: updated.name,
+      school: updated.school,
+      teamName: updated.teamName,
+      teamLogo: updated.teamLogo,
+      playerMode: updated.playerMode,
+      trialUntil: Number(updated.trialUntil),
+      authorizedUntil: Number(updated.authorizedUntil),
+    },
+  })
+})
+
 // ---------- 球员管理 ----------
 
 coachRouter.get('/players', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
@@ -86,24 +237,27 @@ coachRouter.get('/players', authenticate, requireRole('coach'), async (req: Auth
 })
 
 coachRouter.post('/players', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const { name, avatar } = req.body
+  const { name, avatar, age } = req.body
   const now = Date.now()
   const player = await db.player.create({
-    data: { coachId: coachId(req), name, avatar: avatar || '😊', createdAt: now, updatedAt: now },
+    data: { coachId: coachId(req), name, avatar: avatar || '😊', age: age != null ? Number(age) : null, createdAt: now, updatedAt: now },
   })
   res.json({ success: true, data: player })
 })
 
 coachRouter.put('/players/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
   const id = req.params.id as string
-  const { name, avatar, isActive } = req.body
+  const { name, avatar, age, isActive } = req.body
   const player = await db.player.findFirst({ where: { id, coachId: coachId(req) } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
   const updated = await db.player.update({
     where: { id },
     data: {
-      ...(name && { name }), ...(avatar && { avatar }),
-      ...(isActive !== undefined && { isActive }), updatedAt: Date.now(),
+      ...(name !== undefined && { name }),
+      ...(avatar !== undefined && { avatar }),
+      ...(age !== undefined && { age: age != null ? Number(age) : null }),
+      ...(isActive !== undefined && { isActive }),
+      updatedAt: Date.now(),
     },
   })
   res.json({ success: true, data: updated })
@@ -129,15 +283,17 @@ coachRouter.post('/scores', authenticate, requireRole('coach'), async (req: Auth
 
   if (indicatorId) {
     const indicator = await db.scoreIndicator.findUnique({ where: { id: indicatorId } })
-    if (indicator) {
+    const customIndicator = indicator ? null : await db.customIndicator.findUnique({ where: { id: indicatorId } })
+    const limitSource = indicator || customIndicator
+    if (limitSource) {
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
       const todayCount = await db.scoreRecord.aggregate({
         where: { playerId, indicatorId, createdAt: { gte: todayStart.getTime() } },
         _sum: { points: true },
       })
       const todayPoints = todayCount._sum.points || 0
-      if (todayPoints + points > indicator.dailyLimit) {
-        return res.status(400).json({ success: false, error: `今日该指标已达上限 (${todayPoints}/${indicator.dailyLimit})` })
+      if (todayPoints + points > limitSource.dailyLimit) {
+        return res.status(400).json({ success: false, error: `今日该指标已达上限 (${todayPoints}/${limitSource.dailyLimit})` })
       }
     }
   }
@@ -169,6 +325,54 @@ coachRouter.get('/scores/:playerId', authenticate, requireRole('coach'), async (
     orderBy: { createdAt: 'desc' }, take: 50,
   })
   res.json({ success: true, data: records.map(r => ({ ...r, createdAt: Number(r.createdAt) })) })
+})
+
+// ---------- 仪表盘聚合数据 ----------
+
+coachRouter.get('/dashboard-stats', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const cid = coachId(req)
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+
+  const [players, todayAgg, totalAgg, recentRecords] = await Promise.all([
+    db.player.findMany({ where: { coachId: cid }, include: { pet: true } }),
+    db.scoreRecord.aggregate({
+      where: { coachId: cid, createdAt: { gte: todayStart.getTime() } },
+      _sum: { points: true }, _count: { points: true },
+    }),
+    db.scoreRecord.aggregate({
+      where: { coachId: cid },
+      _sum: { points: true }, _count: { points: true },
+    }),
+    db.scoreRecord.findMany({
+      where: { coachId: cid },
+      orderBy: { createdAt: 'desc' }, take: 10,
+      include: { player: { select: { name: true, avatar: true } } },
+    }),
+  ])
+
+  const playerCount = players.filter(p => p.isActive).length
+  const petCount = players.filter(p => p.pet).length
+
+  res.json({
+    success: true,
+    data: {
+      playerCount,
+      petCount,
+      todayScores: todayAgg._sum?.points || 0,
+      todayCount: todayAgg._count?.points || 0,
+      totalScores: totalAgg._sum?.points || 0,
+      totalCount: totalAgg._count?.points || 0,
+      recentRecords: recentRecords.map(r => ({
+        id: r.id,
+        reason: r.reason,
+        points: r.points,
+        playerName: r.player?.name || '',
+        playerAvatar: r.player?.avatar || '',
+        type: r.type,
+        createdAt: Number(r.createdAt),
+      })),
+    },
+  })
 })
 
 // ---------- 球员统计（含维度分数） ----------
@@ -223,7 +427,7 @@ coachRouter.get('/player-stats/:playerId', authenticate, requireRole('coach'), a
   res.json({
     success: true,
     data: {
-      playerId, playerName: player.name, avatar: player.avatar, overall, dimensions: dimStats,
+      playerId, playerName: player.name, avatar: player.avatar, age: player.age ?? null, overall, dimensions: dimStats,
       totalPoints: player.currentPoints, lifetimePoints: player.lifetimePoints,
       todayPoints: todayScores._sum?.points || 0, weeklyPoints: weekScores._sum?.points || 0, rank,
     },
@@ -301,6 +505,55 @@ coachRouter.delete('/indicators/:id', authenticate, requireRole('coach'), async 
   res.json({ success: true, message: '删除成功' })
 })
 
+// ---------- 自定义指标 ----------
+
+coachRouter.get('/custom-indicators', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const indicators = await db.customIndicator.findMany({
+    where: { coachId: coachId(req) },
+    orderBy: { sortOrder: 'asc' },
+  })
+  res.json({ success: true, data: indicators })
+})
+
+coachRouter.post('/custom-indicators', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const { name, defaultPoints, dailyLimit, sortOrder } = req.body
+  if (!name) return res.status(400).json({ success: false, error: '指标名称必填' })
+  const indicator = await db.customIndicator.create({
+    data: {
+      coachId: coachId(req),
+      name,
+      defaultPoints: defaultPoints || 5,
+      dailyLimit: dailyLimit || 20,
+      sortOrder: sortOrder || 0,
+    },
+  })
+  res.json({ success: true, data: indicator })
+})
+
+coachRouter.put('/custom-indicators/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const { name, defaultPoints, dailyLimit, isActive, sortOrder } = req.body
+  const indicator = await db.customIndicator.findFirst({ where: { id, coachId: coachId(req) } })
+  if (!indicator) return res.status(404).json({ success: false, error: '自定义指标不存在' })
+  const updated = await db.customIndicator.update({
+    where: { id },
+    data: {
+      ...(name && { name }),
+      ...(defaultPoints !== undefined && { defaultPoints }),
+      ...(dailyLimit !== undefined && { dailyLimit }),
+      ...(isActive !== undefined && { isActive }),
+      ...(sortOrder !== undefined && { sortOrder }),
+    },
+  })
+  res.json({ success: true, data: updated })
+})
+
+coachRouter.delete('/custom-indicators/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  await db.customIndicator.deleteMany({ where: { id, coachId: coachId(req) } })
+  res.json({ success: true, message: '删除成功' })
+})
+
 // ---------- 奖励规则 ----------
 
 coachRouter.get('/bonus-rules', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
@@ -348,30 +601,6 @@ coachRouter.get('/players/:id/quick-link', authenticate, requireRole('coach'), a
   res.json({ success: true, data: { link, playerName: player.name } })
 })
 
-// ---------- 商店 ----------
-
-coachRouter.get('/shop-items', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const items = await db.shopItem.findMany({
-    where: { OR: [{ coachId: coachId(req) }, { coachId: null }] },
-    orderBy: { sortOrder: 'asc' },
-  })
-  res.json({ success: true, data: items.map(i => ({ ...i, effect: JSON.parse(JSON.stringify(i.effect)) })) })
-})
-
-coachRouter.put('/shop-items/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  const item = await db.shopItem.findFirst({ where: { id, coachId: coachId(req) } })
-  if (!item) return res.status(404).json({ success: false, error: '物品不存在' })
-  const { name, description, price, stock, isActive } = req.body
-  const updateData: any = {}
-  if (name) updateData.name = name
-  if (description !== undefined) updateData.description = description
-  if (price !== undefined) updateData.price = price
-  if (stock !== undefined) updateData.stock = stock
-  if (isActive !== undefined) updateData.isActive = isActive
-  const updated = await db.shopItem.update({ where: { id }, data: updateData })
-  res.json({ success: true, data: { ...updated, effect: JSON.parse(JSON.stringify(updated.effect)) } })
-})
 
 // ---------- 数据导入 ----------
 
@@ -380,4 +609,12 @@ coachRouter.post('/import', authenticate, requireRole('coach'), async (req: Auth
   if (!type || !data) return res.status(400).json({ success: false, error: 'type 和 data 必填' })
   await db.customData.create({ data: { coachId: coachId(req), type, data, importedAt: Date.now() } })
   res.json({ success: true, message: '导入成功' })
+})
+
+// ---------- 头像上传 ----------
+
+coachRouter.post('/upload-avatar', authenticate, requireRole('coach'), avatarUpload.single('avatar'), (req: AuthRequest, res: Response) => {
+  if (!req.file) return res.status(400).json({ success: false, error: '未收到文件' })
+  const url = `/avatars/${req.file.filename}`
+  res.json({ success: true, data: { url } })
 })
