@@ -53,6 +53,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function refreshUser() {
+    if (role.value === 'coach') {
+      const res = await coachApi.getProfile()
+      const body = res.data
+      if (body.success && body.data && user.value) {
+        user.value = { ...user.value, ...body.data }
+      }
+    }
+  }
+
   async function setMode(mode: string) {
     await coachApi.setMode(mode)
     if (user.value) {
@@ -71,5 +81,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     refreshMode,
     setMode,
+    refreshUser,
   }
 })

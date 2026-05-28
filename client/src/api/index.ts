@@ -55,19 +55,34 @@ export const adminApi = {
   importBackgrounds(data: unknown) {
     return api.post('/admin/backgrounds', data)
   },
+  getShopItems() {
+    return api.get('/admin/shop-items')
+  },
+  createShopItem(data: Record<string, unknown>) {
+    return api.post('/admin/shop-items', data)
+  },
+  updateShopItem(id: string, data: Record<string, unknown>) {
+    return api.put(`/admin/shop-items/${id}`, data)
+  },
+  deleteShopItem(id: string) {
+    return api.delete(`/admin/shop-items/${id}`)
+  },
 }
 
 // ── Coach API ────────────────────────────────────────────────────────────────
 
 export const coachApi = {
-  register(phone: string) {
-    return api.post('/coach/register', { phone })
+  register(phone: string, password?: string) {
+    return api.post('/coach/register', { phone, password })
   },
   login(phone: string, password: string) {
     return api.post('/coach/login', { phone, password })
   },
   changePassword(data: { oldPassword: string; newPassword: string }) {
     return api.put('/coach/password', data)
+  },
+  getDashboardStats() {
+    return api.get('/coach/dashboard-stats')
   },
   getPlayers() {
     return api.get('/coach/players')
@@ -111,6 +126,18 @@ export const coachApi = {
   deleteIndicator(id: string) {
     return api.delete(`/coach/indicators/${id}`)
   },
+  getCustomIndicators() {
+    return api.get('/coach/custom-indicators')
+  },
+  createCustomIndicator(data: Record<string, unknown>) {
+    return api.post('/coach/custom-indicators', data)
+  },
+  updateCustomIndicator(id: string, data: Record<string, unknown>) {
+    return api.put(`/coach/custom-indicators/${id}`, data)
+  },
+  deleteCustomIndicator(id: string) {
+    return api.delete(`/coach/custom-indicators/${id}`)
+  },
   getBonusRules() {
     return api.get('/coach/bonus-rules')
   },
@@ -123,17 +150,22 @@ export const coachApi = {
   setMode(mode: string) {
     return api.put('/coach/mode', { playerMode: mode })
   },
-  getShopItems() {
-    return api.get('/coach/shop-items')
-  },
-  updateShopItem(id: string, data: Record<string, unknown>) {
-    return api.put(`/coach/shop-items/${id}`, data)
-  },
   getQuickLink(playerId: string) {
     return api.get(`/coach/players/${playerId}/quick-link`)
   },
   importData(type: string, data: unknown) {
     return api.post('/coach/import', { type, data })
+  },
+  uploadAvatar(data: FormData) {
+    return api.post('/coach/upload-avatar', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  getProfile() {
+    return api.get('/coach/me')
+  },
+  updateProfile(data: Record<string, unknown>) {
+    return api.put('/coach/me', data)
   },
 }
 
@@ -216,5 +248,11 @@ export const publicApi = {
   },
   getPlayerLeaderboard(playerId: string) {
     return api.get(`/public/player/${playerId}/leaderboard`)
+  },
+  getPlayerRecords(playerId: string) {
+    return api.get(`/public/player/${playerId}/records`)
+  },
+  getCoach(phone: string) {
+    return api.get(`/public/coach/${phone}`)
   },
 }
