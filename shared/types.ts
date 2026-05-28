@@ -33,4 +33,11 @@ export interface CreatePlayerInput { name: string; avatar: string }
 export interface ScoreInput { playerId: string; indicatorId?: string | null; points: number; type: ScoreType; reason: string; sessionId?: string | null }
 export interface CreateDimensionInput { name: string; icon: string; sortOrder?: number }
 export interface CreateIndicatorInput { dimensionId: string; name: string; criteria: string; defaultPoints: number; dailyLimit: number; sortOrder?: number }
-export interface PlayerStats { playerId: string; playerName: string; avatar: string; overall: number; dimensions: { dimensionId: string; dimensionName: string; icon: string; score: number; maxScore: number }[]; totalPoints: number; weeklyPoints: number; todayPoints: number; rank: number }
+export interface PlayerStats {
+  playerId: string; playerName: string; avatar: string; overall: number
+  dimensions: {
+    dimensionId: string; dimensionName: string; icon: string; score: number; maxScore: number
+    indicators: { indicatorId: string; indicatorName: string; score: number }[]
+  }[]
+  totalPoints: number; weeklyPoints: number; todayPoints: number; rank: number
+}

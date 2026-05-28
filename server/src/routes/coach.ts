@@ -191,18 +191,27 @@ coachRouter.get('/player-stats/:playerId', authenticate, requireRole('coach'), a
     db.scoreRecord.aggregate({ where: { playerId, createdAt: { gte: weekStart.getTime() } }, _sum: { points: true } }),
   ])
 
-  const dimStats = await Promise.all(dimensions.map(async (dim) => {
-    const indicatorIds = dim.indicators.map(i => i.id)
-    const total = indicatorIds.length > 0 ? await db.scoreRecord.aggregate({
-      where: { playerId, indicatorId: { in: indicatorIds } }, _sum: { points: true },
-    }) : { _sum: { points: 0 } }
+  const indicatorScores = await db.scoreRecord.groupBy({
+    by: ['indicatorId'],
+    where: { playerId, indicatorId: { not: null } },
+    _sum: { points: true },
+  })
+  const scoreMap = new Map(indicatorScores.map(s => [s.indicatorId, s._sum.points || 0]))
+
+  const dimStats = dimensions.map((dim) => {
     const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
-    const score = total._sum?.points || 0
+    const dimTotal = dim.indicators.reduce((sum, ind) => sum + (scoreMap.get(ind.id) || 0), 0)
+    const indicators = dim.indicators.map(ind => ({
+      indicatorId: ind.id,
+      indicatorName: ind.name,
+      score: scoreMap.get(ind.id) || 0,
+    }))
     return {
       dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
-      score: Math.min(99, Math.round((score / Math.max(1, maxScore)) * 99)), maxScore,
+      score: Math.min(99, Math.round((dimTotal / Math.max(1, maxScore)) * 99)), maxScore,
+      indicators,
     }
-  }))
+  })
 
   const overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
   const allPlayers = await db.player.findMany({

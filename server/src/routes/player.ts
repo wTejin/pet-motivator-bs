@@ -142,18 +142,28 @@ publicRouter.get('/public/player-stats/:phone/:playerId', async (req, res) => {
     db.scoreRecord.aggregate({ where: { playerId, createdAt: { gte: weekStart.getTime() } }, _sum: { points: true } }),
   ])
 
-  const dimStats = await Promise.all(dimensions.map(async (dim) => {
-    const indicatorIds = dim.indicators.map(i => i.id)
-    const total = indicatorIds.length > 0 ? await db.scoreRecord.aggregate({
-      where: { playerId, indicatorId: { in: indicatorIds } }, _sum: { points: true },
-    }) : { _sum: { points: 0 } }
+  // 一次性查询所有指标累计得分
+  const indicatorScores = await db.scoreRecord.groupBy({
+    by: ['indicatorId'],
+    where: { playerId, indicatorId: { not: null } },
+    _sum: { points: true },
+  })
+  const scoreMap = new Map(indicatorScores.map(s => [s.indicatorId, s._sum.points || 0]))
+
+  const dimStats = dimensions.map((dim) => {
     const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
-    const score = total._sum?.points || 0
+    const dimTotal = dim.indicators.reduce((sum, ind) => sum + (scoreMap.get(ind.id) || 0), 0)
+    const indicators = dim.indicators.map(ind => ({
+      indicatorId: ind.id,
+      indicatorName: ind.name,
+      score: scoreMap.get(ind.id) || 0,
+    }))
     return {
       dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
-      score: Math.min(99, Math.round((score / Math.max(1, maxScore)) * 99)), maxScore,
+      score: Math.min(99, Math.round((dimTotal / Math.max(1, maxScore)) * 99)), maxScore,
+      indicators,
     }
-  }))
+  })
 
   const overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
   const allPlayers = await db.player.findMany({
@@ -173,7 +183,7 @@ publicRouter.get('/public/player-stats/:phone/:playerId', async (req, res) => {
 })
 
 // ===== 宠物 =====
-playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
+async function handleGetPet(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const pet = await db.pet.findUnique({ where: { playerId } })
   if (!pet) return res.status(404).json({ success: false, error: '宠物不存在' })
@@ -204,10 +214,11 @@ playerRouter.get('/:playerId/pet', async (req: AuthRequest, res: Response) => {
       species: speciesDef ? { ...speciesDef, stages: JSON.parse(JSON.stringify(speciesDef.stages)) } : null,
     },
   })
-})
+}
+playerRouter.get('/:playerId/pet', handleGetPet)
 
 // ===== 模式 =====
-playerRouter.get('/:playerId/mode', async (req: AuthRequest, res: Response) => {
+async function handleGetMode(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const player = await db.player.findUnique({
     where: { id: playerId },
@@ -215,10 +226,11 @@ playerRouter.get('/:playerId/mode', async (req: AuthRequest, res: Response) => {
   })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
   res.json({ success: true, data: { playerMode: player.coach.playerMode } })
-})
+}
+playerRouter.get('/:playerId/mode', handleGetMode)
 
 // ===== 喂食 =====
-playerRouter.post('/:playerId/pet/feed', async (req: AuthRequest, res: Response) => {
+async function handleFeed(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const player = await db.player.findUnique({
     where: { id: playerId },
@@ -262,10 +274,11 @@ playerRouter.post('/:playerId/pet/feed', async (req: AuthRequest, res: Response)
     success: true,
     data: { hunger: pet.hunger, carePoints: pet.carePoints, stage: pet.stage, currentPoints: updatedPlayer!.currentPoints, evolved: newStage !== oldStage },
   })
-})
+}
+playerRouter.post('/:playerId/pet/feed', handleFeed)
 
 // ===== 玩耍 =====
-playerRouter.post('/:playerId/pet/play', async (req: AuthRequest, res: Response) => {
+async function handlePlay(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const player = await db.player.findUnique({
     where: { id: playerId },
@@ -309,10 +322,11 @@ playerRouter.post('/:playerId/pet/play', async (req: AuthRequest, res: Response)
     success: true,
     data: { mood: pet.mood, carePoints: pet.carePoints, stage: pet.stage, currentPoints: updatedPlayer!.currentPoints, evolved: newStage !== oldStage },
   })
-})
+}
+playerRouter.post('/:playerId/pet/play', handlePlay)
 
 // ===== 商店 =====
-playerRouter.get('/:playerId/shop', async (req: AuthRequest, res: Response) => {
+async function handleGetShop(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const player = await db.player.findUnique({ where: { id: playerId } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
@@ -325,9 +339,10 @@ playerRouter.get('/:playerId/shop', async (req: AuthRequest, res: Response) => {
     success: true,
     data: { items: items.map(i => ({ ...i, effect: JSON.parse(JSON.stringify(i.effect)) })), inventory, currentPoints: player.currentPoints },
   })
-})
+}
+playerRouter.get('/:playerId/shop', handleGetShop)
 
-playerRouter.post('/:playerId/shop/buy', async (req: AuthRequest, res: Response) => {
+async function handleBuy(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const { itemId } = req.body
   const player = await db.player.findUnique({
@@ -360,9 +375,10 @@ playerRouter.post('/:playerId/shop/buy', async (req: AuthRequest, res: Response)
 
   const updatedPlayer = await db.player.findUnique({ where: { id: playerId }, select: { currentPoints: true } })
   res.json({ success: true, data: { currentPoints: updatedPlayer!.currentPoints } })
-})
+}
+playerRouter.post('/:playerId/shop/buy', handleBuy)
 
-playerRouter.put('/:playerId/shop/equip', async (req: AuthRequest, res: Response) => {
+async function handleEquip(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const { inventoryId } = req.body
   const player = await db.player.findUnique({
@@ -390,9 +406,10 @@ playerRouter.put('/:playerId/shop/equip', async (req: AuthRequest, res: Response
   }
   await db.pet.update({ where: { playerId }, data: { equippedDecorations: decorationIds } })
   res.json({ success: true, data: { equippedDecorations: decorationIds } })
-})
+}
+playerRouter.put('/:playerId/shop/equip', handleEquip)
 
-playerRouter.post('/:playerId/shop/use', async (req: AuthRequest, res: Response) => {
+async function handleUse(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const { inventoryId } = req.body
   const player = await db.player.findUnique({
@@ -431,10 +448,11 @@ playerRouter.post('/:playerId/shop/use', async (req: AuthRequest, res: Response)
   }
 
   res.json({ success: true, data: { hunger: pet.hunger, mood: pet.mood, carePoints: pet.carePoints, stage: pet.stage } })
-})
+}
+playerRouter.post('/:playerId/shop/use', handleUse)
 
 // ===== 排行榜 =====
-playerRouter.get('/:playerId/leaderboard', async (req: AuthRequest, res: Response) => {
+async function handleLeaderboard(req: Request, res: Response) {
   const playerId = req.params.playerId as string
   const player = await db.player.findUnique({ where: { id: playerId } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
@@ -444,7 +462,19 @@ playerRouter.get('/:playerId/leaderboard', async (req: AuthRequest, res: Respons
     select: { id: true, name: true, avatar: true, currentPoints: true },
   })
   res.json({ success: true, data: players })
-})
+}
+playerRouter.get('/:playerId/leaderboard', handleLeaderboard)
+
+// ===== 公开队员端点 =====
+publicRouter.get('/public/player/:playerId/pet', handleGetPet)
+publicRouter.get('/public/player/:playerId/mode', handleGetMode)
+publicRouter.post('/public/player/:playerId/pet/feed', handleFeed)
+publicRouter.post('/public/player/:playerId/pet/play', handlePlay)
+publicRouter.get('/public/player/:playerId/shop', handleGetShop)
+publicRouter.post('/public/player/:playerId/shop/buy', handleBuy)
+publicRouter.put('/public/player/:playerId/shop/equip', handleEquip)
+publicRouter.post('/public/player/:playerId/shop/use', handleUse)
+publicRouter.get('/public/player/:playerId/leaderboard', handleLeaderboard)
 
 // ===== 辅助 =====
 function getStageByCarePoints(carePoints: number): string {

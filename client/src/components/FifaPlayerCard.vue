@@ -5,13 +5,18 @@
     <div class="card-main">
       <!-- Left column: photo frame + radar -->
       <div class="card-left">
-        <div class="photo-frame">
-          <div class="player-avatar">{{ stats.avatar }}</div>
+        <div class="photo-frame" :style="{ background: frameGradient }">
+          <div class="frame-inner">
+            <div class="player-avatar">{{ stats.avatar }}</div>
+          </div>
+          <div class="frame-stud top"></div>
+          <div class="frame-stud bottom"></div>
+          <div class="frame-shine"></div>
         </div>
         <div class="radar-wrap">
           <RadarChart
             :dimensions="radarDimensions"
-            :size="120"
+            :size="130"
             :color="accentColor"
             :fill-color="accentFillColor"
             grid-color="rgba(255,255,255,0.08)"
@@ -20,27 +25,29 @@
         </div>
       </div>
 
-      <!-- Right column: dimension scores + indicators -->
+      <!-- Right column: 3x2 dimension grid with indicators -->
       <div class="card-right">
-        <div class="dim-scores-row">
+        <div class="dimensions-grid">
           <div
             v-for="dim in stats.dimensions"
             :key="dim.dimensionId"
-            class="dim-score-pill"
+            class="dimension-block"
           >
-            <span class="dim-score-name">{{ dim.dimensionName }}</span>
-            <span class="dim-score-value" :style="{ color: scoreColor(dim.score) }">{{ dim.score }}</span>
-          </div>
-        </div>
-
-        <div v-if="dimensionDefs && dimensionDefs.length" class="indicators-grid">
-          <div
-            v-for="ind in flattenedIndicators"
-            :key="ind.id"
-            class="indicator-row"
-          >
-            <span class="indicator-name">{{ ind.name }}</span>
-            <span class="indicator-dim">{{ ind.dimAbbr }}</span>
+            <div class="dimension-header">
+              <span class="dim-icon">{{ dim.icon }}</span>
+              <span class="dim-name">{{ dim.dimensionName }}</span>
+              <span class="dim-score" :style="{ color: scoreColor(dim.score) }">{{ dim.score }}</span>
+            </div>
+            <div class="indicators-list">
+              <div
+                v-for="ind in dim.indicators"
+                :key="ind.indicatorId"
+                class="indicator-row"
+              >
+                <span class="indicator-name">{{ ind.indicatorName }}</span>
+                <span class="indicator-score">{{ ind.score }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -56,12 +63,6 @@ import RadarChart from './RadarChart.vue'
 const props = defineProps<{
   stats: PlayerStats
   theme?: 'dark' | 'light'
-  dimensionDefs?: {
-    id: string
-    name: string
-    icon: string
-    indicators: { id: string; name: string }[]
-  }[]
 }>()
 
 const isLight = computed(() => props.theme === 'light')
@@ -88,6 +89,14 @@ const accentFillColor = computed(() => {
   }
 })
 
+const frameGradient = computed(() => {
+  switch (ratingTier.value) {
+    case 'gold': return 'linear-gradient(145deg, #ffd700, #b8860b, #daa520)'
+    case 'silver': return 'linear-gradient(145deg, #e8e8e8, #a0a0a0, #d0d0d0)'
+    case 'bronze': return 'linear-gradient(145deg, #cd7f32, #8b4513, #d2691e)'
+  }
+})
+
 const radarDimensions = computed(() =>
   props.stats.dimensions.map((dim) => ({
     label: dim.icon + dim.dimensionName.charAt(0),
@@ -95,18 +104,6 @@ const radarDimensions = computed(() =>
     maxValue: 99,
   })),
 )
-
-const flattenedIndicators = computed(() => {
-  const defs = props.dimensionDefs || []
-  const result: { id: string; name: string; dimAbbr: string }[] = []
-  for (const dim of defs) {
-    const abbr = dim.name.charAt(0)
-    for (const ind of dim.indicators || []) {
-      result.push({ id: ind.id, name: ind.name, dimAbbr: abbr })
-    }
-  }
-  return result
-})
 
 function scoreColor(score: number): string {
   if (score >= 80) return '#ffd700'
@@ -179,32 +176,92 @@ function scoreColor(score: number): string {
 }
 
 .card-left {
-  width: 140px;
+  width: 150px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  height: 100%;
 }
 
 .photo-frame {
+  flex: 1;
   width: 100%;
-  border-radius: 12px;
-  padding: 8px;
-  border: 2px solid v-bind(accentColor);
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+  min-height: 0;
+  max-width: 140px;
+  position: relative;
+  clip-path: polygon(50% 0%, 100% 15%, 100% 85%, 50% 100%, 0% 85%, 0% 15%);
   display: flex;
   align-items: center;
   justify-content: center;
+  filter: drop-shadow(0 0 10px v-bind(accentFillColor));
+}
+
+/* 内框 */
+.frame-inner {
+  width: 86%;
+  height: 86%;
+  background: linear-gradient(180deg, #252545 0%, #151530 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* 铆钉装饰 */
+.frame-stud {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: radial-gradient(circle at 30% 30%, #fff 0%, v-bind(accentColor) 40%, #000 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 5px v-bind(accentColor);
+  z-index: 3;
+  pointer-events: none;
+}
+.frame-stud.top {
+  top: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.frame-stud.bottom {
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 相框高光 */
+.frame-shine {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0%, 100% 15%, 100% 85%, 50% 100%, 0% 85%, 0% 15%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    transparent 35%,
+    transparent 65%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
 }
 
 .player-avatar {
   font-size: 64px;
   line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 .radar-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -213,55 +270,75 @@ function scoreColor(score: number): string {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-.dim-scores-row {
-  display: flex;
-  flex-wrap: wrap;
+.dimensions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
-.dim-score-pill {
-  background: rgba(255, 255, 255, 0.08);
+.dimension-block {
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 8px;
-  padding: 4px 10px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dimension-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 3px;
 }
 
-.dim-score-name {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+.dim-icon {
+  font-size: 11px;
 }
 
-.dim-score-value {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.indicators-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 16px;
-}
-
-.indicator-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.indicator-name {
+.dim-name {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.indicator-dim {
+.dim-score {
+  font-family: 'Russo One', sans-serif;
+  font-size: 13px;
+}
+
+.indicators-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.indicator-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+}
+
+.indicator-name {
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+}
+
+.indicator-score {
+  font-family: 'Russo One', sans-serif;
+  color: rgba(255, 255, 255, 0.75);
   flex-shrink: 0;
-  opacity: 0.5;
 }
 </style>

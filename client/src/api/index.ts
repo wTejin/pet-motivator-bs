@@ -190,4 +190,31 @@ export const publicApi = {
   getDimensions(phone: string) {
     return api.get(`/public/dimensions/${phone}`)
   },
+  getPlayerPet(playerId: string) {
+    return api.get(`/public/player/${playerId}/pet`)
+  },
+  getPlayerMode(playerId: string) {
+    return api.get(`/public/player/${playerId}/mode`)
+  },
+  feedPlayerPet(playerId: string) {
+    return api.post(`/public/player/${playerId}/pet/feed`)
+  },
+  playPlayerPet(playerId: string) {
+    return api.post(`/public/player/${playerId}/pet/play`)
+  },
+  getPlayerShop(playerId: string) {
+    return api.get(`/public/player/${playerId}/shop`)
+  },
+  buyPlayerShopItem(playerId: string, itemId: string) {
+    return api.post(`/public/player/${playerId}/shop/buy`, { itemId })
+  },
+  equipPlayerShopItem(playerId: string, inventoryId: string) {
+    return api.put(`/public/player/${playerId}/shop/equip`, { inventoryId })
+  },
+  usePlayerShopItem(playerId: string, inventoryId: string) {
+    return api.post(`/public/player/${playerId}/shop/use`, { inventoryId })
+  },
+  getPlayerLeaderboard(playerId: string) {
+    return api.get(`/public/player/${playerId}/leaderboard`)
+  },
 }

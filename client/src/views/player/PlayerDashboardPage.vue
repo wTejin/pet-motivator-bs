@@ -28,12 +28,40 @@
       </header>
 
       <div class="dashboard-body">
-        <!-- Left: FIFA Card -->
-        <section class="card-section">
+        <!-- Left: Pet + FIFA Card -->
+        <section class="left-section">
+          <div class="pet-panel">
+            <div class="pet-display-large">
+              <PlayerPetCard :pet="pet" />
+              <div class="pet-name">{{ pet.name }}</div>
+            </div>
+            <div class="pet-vitals">
+              <div class="vital-row">
+                <span class="vital-label">饱食</span>
+                <div class="vital-track">
+                  <div
+                    class="vital-fill"
+                    :style="{ width: pet.hunger + '%', background: hungerGradient(pet.hunger) }"
+                  ></div>
+                </div>
+                <span class="vital-value">{{ pet.hunger }}</span>
+              </div>
+              <div class="vital-row">
+                <span class="vital-label">心情</span>
+                <div class="vital-track">
+                  <div
+                    class="vital-fill"
+                    :style="{ width: pet.mood + '%', background: moodGradient(pet.mood) }"
+                  ></div>
+                </div>
+                <span class="vital-value">{{ pet.mood }}</span>
+              </div>
+            </div>
+          </div>
+
           <FifaPlayerCard
             v-if="playerStats"
             :stats="playerStats"
-            :dimension-defs="dimensionDefs"
             theme="light"
           />
           <div v-else class="card-placeholder">
@@ -41,60 +69,52 @@
           </div>
         </section>
 
-        <!-- Right: Pet Interaction -->
-        <section class="pet-section">
-          <div class="pet-card-wrapper">
-            <PlayerPetCard :pet="pet" />
-            <div class="pet-name-display">{{ pet.name }}</div>
-          </div>
-
-          <!-- Vitals -->
-          <div class="vitals">
-            <div class="vital-row">
-              <span class="vital-label">饱食</span>
-              <div class="vital-track">
-                <div
-                  class="vital-fill"
-                  :style="{ width: pet.hunger + '%', background: hungerGradient(pet.hunger) }"
-                ></div>
-              </div>
-              <span class="vital-value">{{ pet.hunger }}</span>
+        <!-- Right: Actions + Magic Market -->
+        <section class="right-section">
+          <div class="action-panel">
+            <div class="actions">
+              <button class="action-btn action-feed" @click="handleFeed">
+                <span class="btn-icon">🍖</span>
+                <span class="btn-label">喂食</span>
+              </button>
+              <button class="action-btn action-play" @click="handlePlay">
+                <span class="btn-icon">🎾</span>
+                <span class="btn-label">训练</span>
+              </button>
             </div>
-            <div class="vital-row">
-              <span class="vital-label">心情</span>
-              <div class="vital-track">
-                <div
-                  class="vital-fill"
-                  :style="{ width: pet.mood + '%', background: moodGradient(pet.mood) }"
-                ></div>
-              </div>
-              <span class="vital-value">{{ pet.mood }}</span>
+            <div class="points-display">
+              <span class="points-label">当前积分</span>
+              <span class="points-value">{{ currentPoints }}</span>
+              <span class="points-star">⭐</span>
             </div>
           </div>
 
-          <!-- Actions -->
-          <div class="actions">
-            <button class="action-btn action-feed" @click="handleFeed">
-              <span class="btn-icon">🍖</span>
-              <span class="btn-label">喂食</span>
-            </button>
-            <button class="action-btn action-play" @click="handlePlay">
-              <span class="btn-icon">🎾</span>
-              <span class="btn-label">训练</span>
-            </button>
+          <div class="market-panel">
+            <div class="market-header">
+              <span class="market-title">🎒 魔法集市</span>
+              <router-link :to="`/player/${playerId}/shop`" class="market-link">
+                去购买 <span class="link-arrow">&gt;</span>
+              </router-link>
+            </div>
+            <div v-if="inventory.length" class="market-grid">
+              <div
+                v-for="inv in inventory"
+                :key="inv.id"
+                class="market-item"
+                :class="{ equipped: inv.isEquipped, usable: isUsable(inv) }"
+                @click="handleUseItem(inv)"
+              >
+                <span class="item-emoji">{{ getItemEmoji(inv.itemId) }}</span>
+                <span class="item-name">{{ getItemName(inv.itemId) }}</span>
+                <span class="item-qty">x{{ inv.quantity }}</span>
+                <span v-if="inv.isEquipped" class="item-badge">已装备</span>
+              </div>
+            </div>
+            <div v-else class="market-empty">
+              还没有购买任何物品哦~
+            </div>
           </div>
 
-          <!-- Points -->
-          <div class="points-display">
-            <span class="points-label">当前积分</span>
-            <span class="points-value">{{ currentPoints }}</span>
-            <span class="points-star">⭐</span>
-          </div>
-
-          <!-- Links -->
-          <router-link :to="`/player/${playerId}/shop`" class="link-row">
-            🏪 去商店 <span class="link-arrow">&gt;</span>
-          </router-link>
           <router-link
             v-if="coachPhone"
             :to="`/screen?c=${coachPhone}`"
@@ -119,7 +139,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { playerApi, publicApi } from '@/api'
+import { publicApi } from '@/api'
 import FifaPlayerCard from '@/components/FifaPlayerCard.vue'
 import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
 import type { PlayerStats } from '@shared/types'
@@ -141,10 +161,27 @@ interface PetData {
   } | null
 }
 
+interface InventoryItem {
+  id: string
+  playerId: string
+  itemId: string
+  quantity: number
+  isEquipped: boolean
+  acquiredAt: number
+}
+
+interface ShopItemDef {
+  id: string
+  name: string
+  emoji?: string
+  type: 'food' | 'decoration' | 'special'
+}
+
 const pet = ref<PetData | null>(null)
 const playerStats = ref<PlayerStats | null>(null)
-const dimensionDefs = ref<any[]>([])
 const currentPoints = ref(0)
+const inventory = ref<InventoryItem[]>([])
+const shopItems = ref<ShopItemDef[]>([])
 const loading = ref(true)
 const error = ref('')
 const actionMessage = ref('')
@@ -157,9 +194,23 @@ async function loadData() {
   coachPhone.value = route.query.c as string || ''
 
   try {
-    const petRes = await playerApi.getPet(playerId)
+    const [petRes, shopRes] = await Promise.all([
+      publicApi.getPlayerPet(playerId),
+      publicApi.getPlayerShop(playerId).catch(() => null),
+    ])
+
     pet.value = petRes.data.data
     currentPoints.value = petRes.data.data?.currentPoints || 0
+
+    if (shopRes?.data?.success) {
+      inventory.value = shopRes.data.data?.inventory || []
+      shopItems.value = (shopRes.data.data?.items || []).map((i: any) => ({
+        id: i.id,
+        name: i.name,
+        emoji: i.emoji || (i.type === 'food' ? '🍎' : i.type === 'decoration' ? '🎩' : '✨'),
+        type: i.type,
+      }))
+    }
 
     if (coachPhone.value) {
       try {
@@ -170,19 +221,61 @@ async function loadData() {
       } catch (e) {
         console.warn('Failed to load player stats', e)
       }
-      try {
-        const dimRes = await publicApi.getDimensions(coachPhone.value)
-        if (dimRes.data.success) {
-          dimensionDefs.value = dimRes.data.data
-        }
-      } catch (e) {
-        console.warn('Failed to load dimensions', e)
-      }
     }
   } catch (e: any) {
     error.value = e.response?.data?.error || '加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+function getItemName(itemId: string): string {
+  return shopItems.value.find(i => i.id === itemId)?.name || '未知物品'
+}
+
+function getItemEmoji(itemId: string): string {
+  return shopItems.value.find(i => i.id === itemId)?.emoji || '📦'
+}
+
+function isUsable(inv: InventoryItem): boolean {
+  const item = shopItems.value.find(i => i.id === inv.itemId)
+  return item?.type === 'food' || item?.type === 'decoration'
+}
+
+async function handleUseItem(inv: InventoryItem) {
+  actionMessage.value = ''
+  actionError.value = ''
+
+  const item = shopItems.value.find(i => i.id === inv.itemId)
+  if (!item) return
+
+  try {
+    if (item.type === 'food') {
+      const res = await publicApi.usePlayerShopItem(playerId, inv.id)
+      const data = res.data.data
+      if (pet.value) {
+        pet.value.hunger = data.hunger
+        pet.value.mood = data.mood
+        pet.value.carePoints = data.carePoints
+        pet.value.stage = data.stage
+      }
+      actionMessage.value = `🍎 使用了 ${item.name}`
+    } else if (item.type === 'decoration') {
+      const res = await publicApi.equipPlayerShopItem(playerId, inv.id)
+      const data = res.data.data
+      actionMessage.value = inv.isEquipped ? '👒 已卸下' : '🎩 已装备'
+    } else {
+      actionMessage.value = '✨ 物品已激活'
+      return
+    }
+
+    // refresh inventory
+    const shopRes = await publicApi.getPlayerShop(playerId)
+    if (shopRes.data.success) {
+      inventory.value = shopRes.data.data?.inventory || []
+    }
+  } catch (e: any) {
+    actionError.value = e.response?.data?.error || '使用失败'
   }
 }
 
@@ -205,7 +298,7 @@ async function handleFeed() {
   actionMessage.value = ''
   actionError.value = ''
   try {
-    const res = await playerApi.feed(playerId)
+    const res = await publicApi.feedPlayerPet(playerId)
     const data = res.data.data
     if (pet.value) {
       pet.value.hunger = data.hunger
@@ -223,7 +316,7 @@ async function handlePlay() {
   actionMessage.value = ''
   actionError.value = ''
   try {
-    const res = await playerApi.play(playerId)
+    const res = await publicApi.playPlayerPet(playerId)
     const data = res.data.data
     if (pet.value) {
       pet.value.mood = data.mood
@@ -338,22 +431,20 @@ async function handlePlay() {
   align-items: flex-start;
 }
 
-.card-section {
+.left-section {
   flex: 0 0 55%;
   min-width: 0;
-}
-
-.pet-section {
-  flex: 0 0 45%;
-  min-width: 0;
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 20px;
+  gap: 16px;
+}
+
+.right-section {
+  flex: 0 0 45%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .card-placeholder {
@@ -365,30 +456,42 @@ async function handlePlay() {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* ===== Pet Display ===== */
-.pet-card-wrapper {
+/* ===== Pet Panel (Left Top) ===== */
+.pet-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pet-display-large {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  transform: scale(1.2);
+  transform: scale(1.4);
   margin: 16px 0;
 }
 
-.pet-name-display {
+.pet-name {
   font-family: 'ZCOOL KuaiLe', sans-serif;
   font-size: 20px;
   color: #333;
 }
 
-/* ===== Vitals ===== */
-.vitals {
+.pet-vitals {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  max-width: 320px;
 }
 
+/* ===== Vitals ===== */
 .vital-row {
   display: flex;
   align-items: center;
@@ -396,7 +499,7 @@ async function handlePlay() {
 }
 
 .vital-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
   width: 40px;
   flex-shrink: 0;
@@ -418,12 +521,24 @@ async function handlePlay() {
 }
 
 .vital-value {
-  font-size: 14px;
+  font-size: 13px;
   color: #333;
   width: 36px;
   text-align: right;
   font-weight: 700;
   font-family: 'Russo One', sans-serif;
+}
+
+/* ===== Action Panel (Right Top) ===== */
+.action-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
 }
 
 /* ===== Actions ===== */
@@ -439,11 +554,11 @@ async function handlePlay() {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -464,7 +579,7 @@ async function handlePlay() {
 }
 
 .btn-icon {
-  font-size: 20px;
+  font-size: 24px;
 }
 
 /* ===== Points ===== */
@@ -488,6 +603,109 @@ async function handlePlay() {
 
 .points-star {
   font-size: 20px;
+}
+
+/* ===== Market Panel (Right Bottom) ===== */
+.market-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.market-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.market-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+}
+
+.market-link {
+  font-size: 13px;
+  color: #42a5f5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.market-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  position: relative;
+}
+
+.market-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  background: #fff;
+}
+
+.market-item.usable {
+  border: 2px solid #81c784;
+}
+
+.market-item.equipped {
+  border: 2px solid #ffd700;
+}
+
+.item-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.item-name {
+  font-size: 10px;
+  color: #666;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.item-qty {
+  font-size: 10px;
+  color: #999;
+  font-family: 'Russo One', sans-serif;
+}
+
+.item-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 8px;
+  background: #ffd700;
+  color: #333;
+  font-weight: 700;
+}
+
+.market-empty {
+  text-align: center;
+  font-size: 13px;
+  color: #999;
+  padding: 12px 0;
 }
 
 /* ===== Links ===== */
@@ -561,8 +779,8 @@ async function handlePlay() {
     flex-direction: column;
     align-items: stretch;
   }
-  .card-section,
-  .pet-section {
+  .left-section,
+  .right-section {
     flex: 1 1 auto;
     width: 80%;
     margin: 0 auto;
@@ -574,12 +792,18 @@ async function handlePlay() {
   .dashboard-page {
     padding: 12px;
   }
-  .card-section,
-  .pet-section {
+  .left-section,
+  .right-section {
     width: 100%;
   }
   .page-title {
     font-size: 18px;
+  }
+  .market-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .pet-display-large {
+    transform: scale(1.1);
   }
 }
 </style>
