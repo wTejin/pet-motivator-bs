@@ -1,69 +1,526 @@
 <template>
-  <div class="min-h-screen bg-[#0a1628] text-white">
+  <div class="coach-layout">
     <!-- Top Nav Bar -->
-    <nav class="glass-card border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl" style="font-family: var(--font-display)">⚽</span>
-        <h1 class="text-lg font-bold" style="font-family: var(--font-display)">星宠契约 · 教练端</h1>
+    <nav class="coach-nav">
+      <div class="nav-brand">
+        <span class="nav-logo">⚽</span>
+        <h1 class="nav-title">星宠契约 · 教练端</h1>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-white/60">{{ auth.playerMode === 'open' ? '🟢' : '🔴' }}</span>
-          <button
-            class="px-3 py-1 text-xs bg-white/10 rounded-full hover:bg-white/20 transition-colors"
-            @click="toggleMode"
-          >
-            {{ auth.playerMode === 'open' ? '开放模式' : '展示模式' }}
-          </button>
-        </div>
-        <span class="text-sm text-white/60 hidden sm:inline">{{ auth.user?.name }}</span>
-        <button
-          class="text-sm text-white/60 hover:text-red-400 transition-colors"
-          @click="auth.logout()"
+      <!-- Team Name / Logo -->
+      <div class="nav-team" @click="openTeamEdit">
+        <img
+          v-if="isImageAvatar(teamLogo)"
+          :src="teamLogo"
+          class="nav-team-logo-img"
+          alt="team logo"
+        />
+        <span v-else class="nav-team-logo">{{ teamLogo || '⚽' }}</span>
+        <span class="nav-team-name">{{ teamName || '我的球队' }}</span>
+        <span class="nav-team-edit">✎</span>
+      </div>
+      <div class="nav-links">
+        <router-link
+          v-for="link in navLinks"
+          :key="link.to"
+          :to="link.to"
+          class="nav-link"
+          :class="{ active: $route.path === link.to || $route.path.startsWith(link.to + '/') }"
         >
-          退出
-        </button>
+          <span class="link-icon">{{ link.icon }}</span>
+          <span class="link-label">{{ link.label }}</span>
+        </router-link>
+      </div>
+      <div class="nav-actions">
+        <span class="nav-name hidden sm:inline">{{ auth.user?.name }}</span>
+        <button class="nav-logout" @click="auth.logout()">退出</button>
       </div>
     </nav>
 
-    <!-- Quick Link Cards -->
-    <div class="px-4 md:px-6 pt-4 md:pt-6">
-      <div class="grid grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-        <router-link to="/coach/dashboard" class="glass-card p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:-translate-y-1 transition-all">
-          <span class="text-2xl">🏠</span>
-          <span class="text-xs font-semibold text-white/70">首页</span>
-        </router-link>
-        <router-link to="/coach/score" class="glass-card p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:-translate-y-1 transition-all">
-          <span class="text-2xl">📝</span>
-          <span class="text-xs font-semibold text-white/70">快速记分</span>
-        </router-link>
-        <router-link to="/coach/players" class="glass-card p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:-translate-y-1 transition-all">
-          <span class="text-2xl">👥</span>
-          <span class="text-xs font-semibold text-white/70">球员管理</span>
-        </router-link>
-        <router-link to="/coach/player-cards" class="glass-card p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:-translate-y-1 transition-all">
-          <span class="text-2xl">🃏</span>
-          <span class="text-xs font-semibold text-white/70">球员卡</span>
-        </router-link>
-        <router-link to="/coach/shop" class="glass-card p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:-translate-y-1 transition-all">
-          <span class="text-2xl">🛒</span>
-          <span class="text-xs font-semibold text-white/70">商店</span>
-        </router-link>
-      </div>
-
-      <!-- Child page renders here -->
+    <!-- Child page renders here -->
+    <div class="coach-content">
       <router-view />
     </div>
+
+    <!-- Bottom: Back to Screen -->
+    <div class="coach-footer">
+      <router-link to="/screen" class="footer-link">
+        📺 返回球员大屏幕
+      </router-link>
+    </div>
   </div>
+
+  <!-- Team Edit Modal -->
+  <Teleport to="body">
+    <div v-if="showTeamEdit" class="modal-overlay" @click.self="showTeamEdit = false">
+      <div class="team-edit-card">
+        <div class="team-edit-header">
+          <span class="team-edit-title">编辑球队信息</span>
+          <button class="team-edit-close" @click="showTeamEdit = false">✕</button>
+        </div>
+        <div class="team-edit-body">
+          <label class="edit-label">
+            球队名称
+            <input v-model="editForm.teamName" type="text" class="edit-input" placeholder="请输入球队名称" />
+          </label>
+          <div class="edit-label">
+            球队队徽
+            <div
+              class="logo-upload"
+              :class="{ dragging: isDragging }"
+              @dragenter.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @dragover.prevent
+              @drop.prevent="handleDrop"
+              @click="fileInput?.click()"
+            >
+              <template v-if="editForm.teamLogo && isImageAvatar(editForm.teamLogo)">
+                <img :src="editForm.teamLogo" class="logo-preview" alt="preview" />
+                <span class="logo-hint">点击或拖拽更换队徽</span>
+              </template>
+              <template v-else>
+                <span class="logo-icon">🏷️</span>
+                <span class="logo-hint">点击或拖拽上传队徽</span>
+                <span class="logo-sub">支持 JPG / PNG / GIF / WebP，最大 2MB</span>
+              </template>
+            </div>
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              class="hidden-input"
+              @change="handleFileSelect"
+            />
+          </div>
+        </div>
+        <div class="team-edit-actions">
+          <button class="btn-secondary" @click="showTeamEdit = false">取消</button>
+          <button class="btn-primary" @click="saveTeam">保存</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { coachApi } from '@/api'
+import '@/styles/coach-theme.css'
 
 const auth = useAuthStore()
 
-async function toggleMode() {
-  const newMode = auth.playerMode === 'open' ? 'display' : 'open'
-  await auth.setMode(newMode)
+const navLinks = [
+  { to: '/coach/score', icon: '📝', label: '快速记分' },
+  { to: '/coach/players', icon: '👥', label: '球员管理' },
+  { to: '/coach/player-cards', icon: '🃏', label: '球员卡' },
+]
+
+const showTeamEdit = ref(false)
+const isDragging = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const teamName = computed(() => (auth.user?.teamName as string) || '')
+const teamLogo = computed(() => (auth.user?.teamLogo as string) || '')
+
+const editForm = ref({
+  teamName: '',
+  teamLogo: '',
+})
+
+function openTeamEdit() {
+  editForm.value = {
+    teamName: teamName.value,
+    teamLogo: teamLogo.value,
+  }
+  showTeamEdit.value = true
+}
+
+function isImageAvatar(avatar: string): boolean {
+  return avatar?.startsWith('/') ?? false
+}
+
+async function handleFileSelect(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) await uploadFile(file)
+  if (target) target.value = ''
+}
+
+async function handleDrop(e: DragEvent) {
+  isDragging.value = false
+  const file = e.dataTransfer?.files[0]
+  if (file) await uploadFile(file)
+}
+
+async function uploadFile(file: File) {
+  if (file.size > 2 * 1024 * 1024) {
+    alert('文件大小不能超过 2MB')
+    return
+  }
+  const formData = new FormData()
+  formData.append('avatar', file)
+  try {
+    const res = await coachApi.uploadAvatar(formData)
+    if (res.data.success) {
+      editForm.value.teamLogo = res.data.data.url
+    }
+  } catch (e: any) {
+    alert(e.response?.data?.error || '上传失败')
+  }
+}
+
+async function saveTeam() {
+  try {
+    await coachApi.updateProfile({
+      teamName: editForm.value.teamName,
+      teamLogo: editForm.value.teamLogo,
+    })
+    await auth.refreshUser()
+    showTeamEdit.value = false
+  } catch (e: any) {
+    alert(e.response?.data?.error || '保存失败')
+  }
 }
 </script>
+
+<style scoped>
+.coach-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.coach-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-logo {
+  font-size: 24px;
+  font-family: var(--font-display);
+}
+
+.nav-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a2e;
+  font-family: var(--font-display);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  color: #555;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.nav-link.active {
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 10px rgba(66, 165, 245, 0.25);
+}
+
+.link-icon {
+  font-size: 16px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-name {
+  font-size: 14px;
+  color: #666;
+}
+
+.nav-logout {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.nav-logout:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.coach-content {
+  flex: 1;
+  padding: 16px 20px 24px;
+  min-height: 0;
+}
+
+@media (max-width: 640px) {
+  .coach-nav {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .nav-title {
+    font-size: 15px;
+  }
+  .nav-links {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .coach-content {
+    padding: 12px 12px 20px;
+  }
+}
+
+/* Team area in nav */
+.nav-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.nav-team:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+.nav-team-logo {
+  font-size: 20px;
+  line-height: 1;
+}
+.nav-team-logo-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+.nav-team-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a2e;
+  white-space: nowrap;
+}
+.nav-team-edit {
+  font-size: 12px;
+  color: #999;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.nav-team:hover .nav-team-edit {
+  opacity: 1;
+}
+
+/* Footer */
+.coach-footer {
+  padding: 12px 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+.footer-link:hover {
+  opacity: 0.9;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+.team-edit-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.team-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.team-edit-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+.team-edit-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.team-edit-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.team-edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.edit-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+.edit-input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: white;
+  color: #333;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.edit-input:focus {
+  border-color: #42a5f5;
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15);
+}
+.logo-upload {
+  width: 100%;
+  padding: 28px 20px;
+  border-radius: 16px;
+  border: 2px dashed rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.logo-upload:hover,
+.logo-upload.dragging {
+  border-color: #42a5f5;
+  background: rgba(66, 165, 245, 0.05);
+}
+.logo-preview {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+}
+.logo-icon {
+  font-size: 32px;
+}
+.logo-hint {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+.logo-sub {
+  font-size: 12px;
+  color: #999;
+}
+.hidden-input {
+  display: none;
+}
+.team-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn-primary {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+</style>
