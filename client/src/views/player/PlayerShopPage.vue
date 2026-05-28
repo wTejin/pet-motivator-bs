@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-slate-900 px-4 py-6">
+  <div class="min-h-screen bg-[#0a1628] px-4 py-6">
     <div class="max-w-2xl mx-auto">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -9,12 +9,15 @@
         >
           <span class="text-lg">&#8592;</span> 返回
         </router-link>
-        <h1 class="text-xl font-bold text-white">商店</h1>
-        <div class="text-yellow-400 font-bold">{{ currentPoints }} 分</div>
+        <h1 class="text-xl font-bold text-white" style="font-family: var(--font-display)">商店</h1>
+        <div class="text-[#FFD700] font-bold" style="font-family: var(--font-num)">{{ currentPoints }} 分</div>
       </div>
 
       <!-- Loading -->
-      <div v-if="loading" class="text-center text-white/60 py-8">加载中...</div>
+      <div v-if="loading" class="text-center text-white/60 py-8">
+        <div class="skeleton h-24 w-full mb-4"></div>
+        <div class="skeleton h-24 w-full"></div>
+      </div>
 
       <template v-else>
         <!-- Display Mode Warning -->
@@ -24,23 +27,23 @@
 
         <!-- Shop Items Grid -->
         <div class="mb-8">
-          <h2 class="text-lg font-semibold text-white mb-4">可购买物品</h2>
-          <div v-if="shopItems.length === 0" class="text-center text-white/40 py-4">暂无商品</div>
+          <h2 class="text-lg font-semibold text-white mb-4" style="font-family: var(--font-display)">可购买物品</h2>
+          <div v-if="shopItems.length === 0" class="text-center text-white/40 py-4 glass-card">暂无商品</div>
           <div v-else class="grid grid-cols-2 gap-3">
             <div
               v-for="item in shopItems"
               :key="item.id"
-              class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col"
+              class="glass-card p-4 flex flex-col"
             >
               <div class="flex-1">
                 <h3 class="font-semibold text-white">{{ item.name }}</h3>
                 <p class="text-xs text-white/50 mt-1">{{ item.description }}</p>
               </div>
               <div class="flex items-center justify-between mt-3">
-                <span class="text-yellow-400 text-sm font-semibold">{{ item.price }} 分</span>
+                <span class="text-[#FFD700] text-sm font-semibold" style="font-family: var(--font-num)">{{ item.price }} 分</span>
                 <button
                   :disabled="isDisplayMode || currentPoints < item.price"
-                  class="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-white/30 text-white rounded-lg transition-colors"
+                  class="btn-primary text-xs"
                   @click="handleBuy(item.id)"
                 >
                   购买
@@ -52,21 +55,21 @@
 
         <!-- Owned Inventory -->
         <div>
-          <h2 class="text-lg font-semibold text-white mb-4">我的背包</h2>
-          <div v-if="inventory.length === 0" class="text-center text-white/40 py-4">背包为空</div>
+          <h2 class="text-lg font-semibold text-white mb-4" style="font-family: var(--font-display)">我的背包</h2>
+          <div v-if="inventory.length === 0" class="text-center text-white/40 py-4 glass-card">背包为空</div>
           <div v-else class="space-y-3">
             <div
               v-for="inv in inventory"
               :key="inv.id"
               :class="[
-                'bg-white/5 border rounded-xl p-3 flex items-center justify-between',
-                inv.isEquipped ? 'border-blue-500/50' : 'border-white/10',
+                'glass-card p-3 flex items-center justify-between',
+                inv.isEquipped && 'border-[#39FF14]/50',
               ]"
             >
               <div>
                 <div class="text-sm font-medium text-white">
                   {{ getItemName(inv.itemId) }}
-                  <span v-if="inv.isEquipped" class="text-blue-400 text-xs ml-1">[已装备]</span>
+                  <span v-if="inv.isEquipped" class="text-[#39FF14] text-xs ml-1">[已装备]</span>
                 </div>
                 <div class="text-xs text-white/40">数量: {{ inv.quantity }}</div>
               </div>
@@ -75,7 +78,7 @@
                   v-if="getItemType(inv.itemId) === 'decoration'"
                   :disabled="isDisplayMode"
                   class="px-3 py-1 text-xs rounded-lg transition-colors"
-                  :class="inv.isEquipped ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : 'bg-white/10 text-white/60 hover:bg-white/20'"
+                  :class="inv.isEquipped ? 'bg-white/10 text-white/60 hover:bg-white/20' : 'bg-[#39FF14]/20 text-[#39FF14] hover:bg-[#39FF14]/30'"
                   @click="handleEquip(inv.id)"
                 >
                   {{ inv.isEquipped ? '卸下' : '装备' }}
@@ -95,8 +98,8 @@
       </template>
 
       <!-- Status -->
-      <div v-if="statusMessage" class="mt-4 text-sm text-green-400 text-center">{{ statusMessage }}</div>
-      <div v-if="statusError" class="mt-4 text-sm text-red-400 text-center">{{ statusError }}</div>
+      <div v-if="statusMessage" class="mt-4 text-sm text-green-400 text-center glass-card p-3">{{ statusMessage }}</div>
+      <div v-if="statusError" class="mt-4 text-sm text-red-400 text-center glass-card p-3">{{ statusError }}</div>
     </div>
   </div>
 </template>
@@ -165,7 +168,6 @@ async function handleBuy(itemId: string) {
   try {
     const res = await playerApi.buy(playerId, itemId)
     currentPoints.value = res.data.data?.currentPoints ?? currentPoints.value
-    // Refresh shop data
     const shopRes = await playerApi.getShop(playerId)
     shopItems.value = shopRes.data.data?.items || []
     inventory.value = shopRes.data.data?.inventory || []
@@ -181,9 +183,9 @@ async function handleEquip(inventoryId: string) {
   statusError.value = ''
   try {
     await playerApi.equip(playerId, inventoryId)
-    // Refresh inventory
     const shopRes = await playerApi.getShop(playerId)
     inventory.value = shopRes.data.data?.inventory || []
+    statusMessage.value = '操作成功！'
   } catch (e: any) {
     statusError.value = e.response?.data?.error || '操作失败'
   }

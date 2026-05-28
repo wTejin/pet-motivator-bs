@@ -1,54 +1,37 @@
 <template>
-  <div class="min-h-screen bg-slate-900 text-white">
-    <!-- Top Nav -->
-    <nav class="bg-gray-800/50 border-b border-white/10 px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <router-link to="/admin/dashboard" class="text-white/60 hover:text-white transition-colors">
-          &#8592; 返回
-        </router-link>
-        <h1 class="text-lg font-bold">教练管理</h1>
-      </div>
-      <div class="flex items-center gap-4">
-        <span class="text-sm text-white/60">{{ auth.user?.username }}</span>
+  <div class="max-w-7xl mx-auto space-y-6">
+    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">教练管理</h2>
+
+    <!-- Add Coach Form -->
+    <div class="glass-card p-4">
+      <h3 class="text-sm font-semibold mb-3 text-white/70">添加教练</h3>
+      <div class="flex flex-col md:flex-row gap-3">
+        <input
+          v-model="newPhone"
+          type="tel"
+          maxlength="11"
+          placeholder="输入11位手机号"
+          class="input-field flex-1"
+        />
         <button
-          class="text-sm text-white/60 hover:text-red-400 transition-colors"
-          @click="auth.logout()"
+          class="btn-primary"
+          @click="handleAddCoach"
         >
-          退出
+          添加
         </button>
       </div>
-    </nav>
+    </div>
 
-    <div class="max-w-7xl mx-auto p-4 md:p-6">
-      <!-- Add Coach Form -->
-      <div class="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-        <h3 class="text-sm font-semibold mb-3">添加教练</h3>
-        <div class="flex flex-col md:flex-row gap-3">
-          <input
-            v-model="newPhone"
-            type="tel"
-            maxlength="11"
-            placeholder="输入11位手机号"
-            class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 flex-1 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-          />
-          <button
-            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-            @click="handleAddCoach"
-          >
-            添加
-          </button>
-        </div>
-      </div>
+    <!-- Loading -->
+    <div v-if="loading" class="text-center text-white/60 py-8">加载中...</div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="text-center text-white/60 py-8">加载中...</div>
-
-      <!-- Coaches Table -->
-      <div v-else class="overflow-x-auto">
+    <!-- Coaches Table -->
+    <div v-else class="glass-card overflow-hidden">
+      <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
             <tr class="text-left text-white/40 text-sm border-b border-white/10">
-              <th class="pb-3 pr-4">手机号</th>
+              <th class="pb-3 pr-4 pl-4">手机号</th>
               <th class="pb-3 pr-4">姓名</th>
               <th class="pb-3 pr-4">学校</th>
               <th class="pb-3 pr-4">球员数</th>
@@ -59,8 +42,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="coach in coaches" :key="coach.id" class="border-b border-white/5">
-              <td class="py-3 pr-4 text-sm">{{ coach.phone }}</td>
+            <tr v-for="coach in coaches" :key="coach.id" class="border-b border-white/5 hover:bg-white/5 transition-colors">
+              <td class="py-3 pr-4 pl-4 text-sm">{{ coach.phone }}</td>
               <td class="py-3 pr-4 text-sm">{{ coach.name || '-' }}</td>
               <td class="py-3 pr-4 text-sm">{{ coach.school || '-' }}</td>
               <td class="py-3 pr-4 text-sm">{{ coach.playerCount }}</td>
@@ -109,9 +92,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { adminApi } from '@/api'
-import { useAuthStore } from '@/stores/auth'
-
-const auth = useAuthStore()
 
 interface CoachItem {
   id: string

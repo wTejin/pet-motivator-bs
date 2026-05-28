@@ -1,64 +1,25 @@
 <template>
-  <div class="max-w-6xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6">商店管理</h2>
+  <div class="space-y-6">
+    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">商店管理</h2>
 
-    <!-- Add / Edit Shop Item Form -->
-    <div class="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-      <h3 class="text-sm font-semibold mb-3">{{ editingItem ? '编辑物品' : '添加上架物品' }}</h3>
+    <!-- Edit Shop Item Form -->
+    <div class="glass-card p-4">
+      <h3 class="text-sm font-semibold mb-3 text-white/70">{{ editingItem ? '编辑物品' : '物品管理' }}</h3>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <input
-          v-model="shopForm.name"
-          placeholder="物品名称"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
-        <input
-          v-model="shopForm.description"
-          placeholder="描述"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
-        <input
-          v-model.number="shopForm.price"
-          type="number"
-          placeholder="价格"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
-        <input
-          v-model.number="shopForm.stock"
-          type="number"
-          placeholder="库存"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
-        <select
-          v-model="shopForm.type"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
-        >
+        <input v-model="shopForm.name" placeholder="物品名称" class="input-field" />
+        <input v-model="shopForm.description" placeholder="描述" class="input-field" />
+        <input v-model.number="shopForm.price" type="number" placeholder="价格" class="input-field" />
+        <input v-model.number="shopForm.stock" type="number" placeholder="库存" class="input-field" />
+        <select v-model="shopForm.type" class="input-field">
           <option value="food">食物</option>
           <option value="decoration">装饰</option>
           <option value="special">特殊</option>
         </select>
-        <input
-          v-model.number="effectForm.hunger"
-          type="number"
-          placeholder="饥饿效果"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
-        <input
-          v-model.number="effectForm.mood"
-          type="number"
-          placeholder="心情效果"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
-        <input
-          v-model.number="effectForm.experience"
-          type="number"
-          placeholder="经验效果"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-        />
+        <input v-model.number="effectForm.hunger" type="number" placeholder="饥饿效果" class="input-field" />
+        <input v-model.number="effectForm.mood" type="number" placeholder="心情效果" class="input-field" />
+        <input v-model.number="effectForm.experience" type="number" placeholder="经验效果" class="input-field" />
         <div class="flex gap-2">
-          <button
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-            @click="editingItem ? saveEdit() : addItem()"
-          >
+          <button class="btn-primary" @click="editingItem ? saveEdit() : addItem()">
             {{ editingItem ? '保存' : '添加' }}
           </button>
           <button
@@ -70,7 +31,7 @@
           </button>
         </div>
       </div>
-      <p class="text-xs text-white/40 mt-2">注意：新增物品需通过后端API直接创建，此处仅支持编辑已有物品</p>
+      <p class="text-xs text-white/40 mt-2">新增物品需通过后端API直接创建，此处仅支持编辑已有物品</p>
     </div>
 
     <!-- Shop Items Grid -->
@@ -78,10 +39,7 @@
       <div
         v-for="item in items"
         :key="item.id"
-        :class="[
-          'bg-white/5 border border-white/10 rounded-xl p-4 transition-all',
-          !item.isActive && 'opacity-50',
-        ]"
+        :class="['glass-card p-4 transition-all', !item.isActive && 'opacity-50']"
       >
         <div class="flex items-start justify-between mb-2">
           <div>
@@ -91,20 +49,12 @@
           <span class="text-xs px-2 py-1 bg-white/10 rounded text-white/60">{{ typeLabel(item.type) }}</span>
         </div>
         <div class="flex justify-between text-sm mb-3">
-          <span class="text-yellow-400">{{ item.price }} 分</span>
+          <span class="text-[#FFD700] font-semibold" style="font-family: var(--font-num)">{{ item.price }} 分</span>
           <span class="text-white/40">库存: {{ item.stock }}</span>
         </div>
         <div class="flex gap-1">
-          <button
-            class="px-2 py-1 text-xs bg-white/10 text-white/60 rounded hover:bg-white/20 transition-colors"
-            @click="startEdit(item)"
-          >
-            编辑
-          </button>
-          <button
-            class="px-2 py-1 text-xs bg-white/10 text-white/60 rounded hover:bg-white/20 transition-colors"
-            @click="toggleActive(item)"
-          >
+          <button class="px-2 py-1 text-xs bg-white/10 text-white/60 rounded hover:bg-white/20 transition-colors" @click="startEdit(item)">编辑</button>
+          <button class="px-2 py-1 text-xs bg-white/10 text-white/60 rounded hover:bg-white/20 transition-colors" @click="toggleActive(item)">
             {{ item.isActive ? '下架' : '上架' }}
           </button>
         </div>

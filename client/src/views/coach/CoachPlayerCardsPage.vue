@@ -1,13 +1,13 @@
 <template>
-  <div class="max-w-7xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6">球员卡</h2>
+  <div class="space-y-6">
+    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">球员卡</h2>
 
     <!-- View Toggle -->
-    <div class="flex gap-2 mb-6">
+    <div class="flex gap-2">
       <button
         :class="[
           'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-          viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10',
+          viewMode === 'grid' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
         ]"
         @click="viewMode = 'grid'"
       >
@@ -16,7 +16,7 @@
       <button
         :class="[
           'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-          viewMode === 'compare' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10',
+          viewMode === 'compare' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
         ]"
         @click="viewMode = 'compare'"
       >
@@ -25,7 +25,9 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-center text-white/60 py-8">加载中...</div>
+    <div v-if="loading" class="text-center text-white/60 py-8">
+      <div class="skeleton h-64 w-full max-w-sm mx-auto"></div>
+    </div>
 
     <!-- Grid View -->
     <div v-if="viewMode === 'grid' && !loading">
@@ -41,7 +43,7 @@
 
     <!-- Compare View -->
     <div v-if="viewMode === 'compare' && !loading">
-      <div class="mb-6">
+      <div class="glass-card p-4 mb-6">
         <p class="text-sm text-white/50 mb-3">选择要对比的球员（最多4名）</p>
         <div class="flex gap-2 flex-wrap">
           <button
@@ -50,7 +52,7 @@
             :class="[
               'px-4 py-2 rounded-full border text-sm transition-all',
               compareIds.includes(player.id)
-                ? 'border-blue-500 bg-blue-500/20 text-white'
+                ? 'border-[#39FF14] bg-[#39FF14]/20 text-white'
                 : 'border-white/10 bg-white/5 text-white/60 hover:border-white/30',
             ]"
             @click="toggleCompare(player.id)"
@@ -58,7 +60,7 @@
             {{ player.avatar }} {{ player.name }}
           </button>
         </div>
-        <p v-if="compareIds.length >= 4" class="text-xs text-yellow-400 mt-2">已达到最大对比数量</p>
+        <p v-if="compareIds.length >= 4" class="text-xs text-[#FFD700] mt-2">已达到最大对比数量</p>
       </div>
 
       <div v-if="compareStats.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">

@@ -1,17 +1,17 @@
 <template>
-  <div class="max-w-4xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6">快速记分</h2>
+  <div class="space-y-6">
+    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">⚡ 快速记分</h2>
 
     <!-- Player Chip Selector -->
-    <div class="mb-6">
-      <div class="flex gap-2 overflow-x-auto pb-2">
+    <div class="glass-card p-4">
+      <div class="flex gap-2 overflow-x-auto pb-2 flex-wrap">
         <button
           v-for="player in players"
           :key="player.id"
           :class="[
             'flex items-center gap-2 px-4 py-2 rounded-full border whitespace-nowrap transition-all flex-shrink-0',
             isSelected(player.id)
-              ? 'border-blue-500 bg-blue-500/20 text-white'
+              ? 'border-[#39FF14] bg-[#39FF14]/20 text-white'
               : 'border-white/10 bg-white/5 text-white/60 hover:border-white/30',
           ]"
           @click="togglePlayer(player.id)"
@@ -20,26 +20,26 @@
           <span class="text-sm">{{ player.name }}</span>
         </button>
       </div>
-      <label class="flex items-center gap-2 mt-3 text-sm text-white/60">
-        <input v-model="batchMode" type="checkbox" class="rounded" />
+      <label class="flex items-center gap-2 mt-3 text-sm text-white/60 cursor-pointer">
+        <input v-model="batchMode" type="checkbox" class="rounded accent-[#39FF14]" />
         批量模式（多人统一加分）
       </label>
     </div>
 
     <!-- Dimension Grid -->
-    <div v-if="selectedIds.length > 0" class="space-y-6">
-      <div v-for="dim in dimensions" :key="dim.id" class="bg-white/5 border border-white/10 rounded-xl p-4">
+    <div v-if="selectedIds.length > 0" class="space-y-4">
+      <div v-for="dim in dimensions" :key="dim.id" class="glass-card p-4">
         <h3 class="text-lg font-semibold mb-3">{{ dim.icon }} {{ dim.name }}</h3>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
           <button
             v-for="indicator in dim.indicators"
             :key="indicator.id"
-            class="text-left bg-white/5 border border-white/10 rounded-lg p-3 hover:border-blue-500 hover:bg-blue-500/10 transition-all"
+            class="text-left bg-white/5 border border-white/10 rounded-lg p-3 hover:border-[#39FF14] hover:bg-[#39FF14]/5 transition-all"
             @click="handleIndicatorScore(indicator)"
           >
             <div class="text-sm font-medium">{{ indicator.name }}</div>
             <div class="flex items-center justify-between mt-1">
-              <span class="text-yellow-400 text-xs">+{{ indicator.defaultPoints }}</span>
+              <span class="text-[#FFD700] text-xs">+{{ indicator.defaultPoints }}</span>
               <span class="text-white/40 text-xs">今日 {{ getDailyCount(indicator.id) }}/{{ indicator.dailyLimit }}</span>
             </div>
           </button>
@@ -48,30 +48,30 @@
     </div>
 
     <!-- Custom Score -->
-    <div class="mt-6 bg-white/5 border border-white/10 rounded-xl p-4">
+    <div class="glass-card p-4">
       <h3 class="text-lg font-semibold mb-3">自定义记分</h3>
       <div class="flex flex-col md:flex-row gap-3">
         <input
           v-model="customPoints"
           type="number"
           placeholder="分数"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 w-full md:w-24 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
+          class="input-field w-full md:w-24"
         />
         <input
           v-model="customReason"
           type="text"
           placeholder="评分原因"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 flex-1 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
+          class="input-field flex-1"
         />
         <button
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50"
+          class="btn-success"
           :disabled="!canAddCustom"
           @click="handleCustomScore(true)"
         >
           加分
         </button>
         <button
-          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors disabled:opacity-50"
+          class="btn-danger"
           :disabled="!canAddCustom"
           @click="handleCustomScore(false)"
         >
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Scoring Tips -->
-    <details class="mt-6 bg-white/5 border border-white/10 rounded-xl p-4">
+    <details class="glass-card p-4">
       <summary class="text-sm font-semibold text-white/70 cursor-pointer">评分建议</summary>
       <div class="mt-3 text-sm text-white/50 space-y-2">
         <p><strong>记录方式建议：</strong>课堂即时记录，课后汇总。正面行为优先，即见即记。</p>
@@ -90,9 +90,9 @@
       </div>
     </details>
 
-    <!-- Status message -->
-    <div v-if="statusMessage" class="mt-4 text-sm text-green-400">{{ statusMessage }}</div>
-    <div v-if="statusError" class="mt-4 text-sm text-red-400">{{ statusError }}</div>
+    <!-- Status -->
+    <div v-if="statusMessage" class="text-sm text-green-400 text-center p-3 glass-card">{{ statusMessage }}</div>
+    <div v-if="statusError" class="text-sm text-red-400 text-center p-3 glass-card">{{ statusError }}</div>
   </div>
 </template>
 
@@ -132,7 +132,6 @@ const customPoints = ref<number | null>(null)
 const customReason = ref('')
 const statusMessage = ref('')
 const statusError = ref('')
-// Track today's indicator usage in memory (simple map)
 const dailyCounts = ref<Record<string, number>>({})
 
 onMounted(async () => {

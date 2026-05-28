@@ -1,19 +1,19 @@
 <template>
-  <div class="max-w-6xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6">球员管理</h2>
+  <div class="space-y-6">
+    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">球员管理</h2>
 
     <!-- Add / Edit Player Form -->
-    <div class="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-      <h3 class="text-sm font-semibold mb-3">{{ editingPlayer ? '编辑球员' : '添加球员' }}</h3>
+    <div class="glass-card p-4">
+      <h3 class="text-sm font-semibold mb-3 text-white/70">{{ editingPlayer ? '编辑球员' : '添加球员' }}</h3>
       <div class="flex flex-col md:flex-row gap-3">
         <input
           v-model="playerForm.name"
           placeholder="球员姓名"
-          class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 flex-1 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
+          class="input-field flex-1"
         />
         <div class="relative">
           <button
-            class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+            class="input-field flex items-center gap-2 cursor-pointer"
             @click="showEmojiPicker = !showEmojiPicker"
           >
             头像 {{ playerForm.avatar }}
@@ -21,7 +21,6 @@
           <div
             v-if="showEmojiPicker"
             class="absolute top-full mt-2 bg-slate-800 border border-white/20 rounded-xl p-3 grid grid-cols-6 gap-2 z-10 shadow-xl"
-            @click.away="showEmojiPicker = false"
           >
             <button
               v-for="emoji in emojiList"
@@ -34,10 +33,7 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <button
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-            @click="editingPlayer ? saveEdit() : addPlayer()"
-          >
+          <button class="btn-primary" @click="editingPlayer ? saveEdit() : addPlayer()">
             {{ editingPlayer ? '保存' : '添加' }}
           </button>
           <button
@@ -57,7 +53,7 @@
         v-for="player in players"
         :key="player.id"
         :class="[
-          'bg-white/5 border border-white/10 rounded-xl p-4 transition-all',
+          'glass-card p-4 transition-all',
           !player.isActive && 'opacity-50',
         ]"
       >
@@ -69,7 +65,7 @@
           </div>
         </div>
         <div class="flex justify-between text-sm mb-3">
-          <span class="text-yellow-400">{{ player.currentPoints }} 分</span>
+          <span class="text-[#FFD700] font-semibold" style="font-family: var(--font-num)">{{ player.currentPoints }} 分</span>
           <span class="text-white/40">{{ player.lifetimePoints }} 累计</span>
         </div>
         <div class="flex gap-1 flex-wrap">
@@ -103,32 +99,24 @@
     </div>
 
     <!-- Quick Link Modal -->
-    <div
-      v-if="quickLink"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      @click.self="quickLink = null"
-    >
-      <div class="bg-slate-800 border border-white/20 rounded-2xl p-6 w-full max-w-md mx-4">
-        <h3 class="text-lg font-bold mb-3">快捷链接 - {{ quickLinkPlayer }}</h3>
-        <div class="bg-white/5 border border-white/10 rounded-lg p-3 break-all text-sm text-white/70 mb-4">
-          {{ quickLink }}
-        </div>
-        <div class="flex gap-2">
-          <button
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-            @click="copyLink()"
-          >
-            复制链接
-          </button>
-          <button
-            class="px-4 py-2 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 transition-colors"
-            @click="quickLink = null"
-          >
-            关闭
-          </button>
+    <Teleport to="body">
+      <div
+        v-if="quickLink"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        @click.self="quickLink = null"
+      >
+        <div class="glass-card p-6 w-full max-w-md">
+          <h3 class="text-lg font-bold mb-3" style="font-family: var(--font-display)">快捷链接 - {{ quickLinkPlayer }}</h3>
+          <div class="bg-white/5 border border-white/10 rounded-lg p-3 break-all text-sm text-white/70 mb-4">
+            {{ quickLink }}
+          </div>
+          <div class="flex gap-2">
+            <button class="btn-primary flex-1" @click="copyLink()">复制链接</button>
+            <button class="px-4 py-2 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 transition-colors" @click="quickLink = null">关闭</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

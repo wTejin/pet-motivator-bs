@@ -1,13 +1,13 @@
 <template>
-  <div class="max-w-4xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6">评分配置</h2>
+  <div class="space-y-6">
+    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">评分配置</h2>
 
     <!-- Tabs -->
-    <div class="flex gap-2 mb-6">
+    <div class="flex gap-2">
       <button
         :class="[
           'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-          activeTab === 'dimensions' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10',
+          activeTab === 'dimensions' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
         ]"
         @click="activeTab = 'dimensions'"
       >
@@ -16,7 +16,7 @@
       <button
         :class="[
           'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-          activeTab === 'indicators' ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10',
+          activeTab === 'indicators' ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
         ]"
         @click="activeTab = 'indicators'"
       >
@@ -26,40 +26,22 @@
 
     <!-- Dimensions Tab -->
     <div v-if="activeTab === 'dimensions'" class="space-y-4">
-      <!-- Add Dimension Form -->
-      <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-        <h3 class="text-sm font-semibold mb-3">{{ editingDim ? '编辑维度' : '添加维度' }}</h3>
+      <div class="glass-card p-4">
+        <h3 class="text-sm font-semibold mb-3 text-white/70">{{ editingDim ? '编辑维度' : '添加维度' }}</h3>
         <div class="flex flex-col md:flex-row gap-3">
-          <input
-            v-model="dimForm.name"
-            placeholder="维度名称"
-            class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 flex-1 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-          />
-          <div class="flex gap-2">
-            <select
-              v-model="dimForm.icon"
-              class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="⚽">⚽ 足球</option>
-              <option value="📚">📚 学习</option>
-              <option value="🏃">🏃 体能</option>
-              <option value="🤝">🤝 团队</option>
-              <option value="🧠">🧠 战术</option>
-              <option value="💪">💪 态度</option>
-              <option value="🎯">🎯 技术</option>
-              <option value="⭐">⭐ 其他</option>
-            </select>
-          </div>
-          <input
-            v-model.number="dimForm.sortOrder"
-            type="number"
-            placeholder="排序"
-            class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 w-20 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-          />
-          <button
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-            @click="editingDim ? saveDimEdit() : addDimension()"
-          >
+          <input v-model="dimForm.name" placeholder="维度名称" class="input-field flex-1" />
+          <select v-model="dimForm.icon" class="input-field w-auto">
+            <option value="⚽">⚽ 足球</option>
+            <option value="📚">📚 学习</option>
+            <option value="🏃">🏃 体能</option>
+            <option value="🤝">🤝 团队</option>
+            <option value="🧠">🧠 战术</option>
+            <option value="💪">💪 态度</option>
+            <option value="🎯">🎯 技术</option>
+            <option value="⭐">⭐ 其他</option>
+          </select>
+          <input v-model.number="dimForm.sortOrder" type="number" placeholder="排序" class="input-field w-20" />
+          <button class="btn-primary" @click="editingDim ? saveDimEdit() : addDimension()">
             {{ editingDim ? '保存' : '添加' }}
           </button>
           <button
@@ -72,12 +54,11 @@
         </div>
       </div>
 
-      <!-- Dimension List -->
       <div class="space-y-3">
         <div
           v-for="dim in dimensions"
           :key="dim.id"
-          class="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between"
+          class="glass-card p-4 flex items-center justify-between"
         >
           <div class="flex items-center gap-3">
             <span class="text-2xl">{{ dim.icon }}</span>
@@ -87,24 +68,9 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button
-              class="px-3 py-1 text-sm bg-white/10 text-white/60 rounded-lg hover:bg-white/20 transition-colors"
-              @click="selectDimForIndicators(dim)"
-            >
-              指标
-            </button>
-            <button
-              class="px-3 py-1 text-sm bg-white/10 text-white/60 rounded-lg hover:bg-white/20 transition-colors"
-              @click="startEditDim(dim)"
-            >
-              编辑
-            </button>
-            <button
-              class="px-3 py-1 text-sm bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-              @click="deleteDimension(dim.id)"
-            >
-              删除
-            </button>
+            <button class="px-3 py-1 text-sm bg-white/10 text-white/60 rounded-lg hover:bg-white/20 transition-colors" @click="selectDimForIndicators(dim)">指标</button>
+            <button class="px-3 py-1 text-sm bg-white/10 text-white/60 rounded-lg hover:bg-white/20 transition-colors" @click="startEditDim(dim)">编辑</button>
+            <button class="px-3 py-1 text-sm bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors" @click="deleteDimension(dim.id)">删除</button>
           </div>
         </div>
         <div v-if="dimensions.length === 0" class="text-center text-white/40 py-8">暂无维度，请添加</div>
@@ -113,14 +79,13 @@
 
     <!-- Indicators Tab -->
     <div v-if="activeTab === 'indicators'" class="space-y-4">
-      <!-- Dimension Selector for Indicators -->
       <div class="flex gap-2 flex-wrap">
         <button
           v-for="dim in dimensions"
           :key="dim.id"
           :class="[
             'px-4 py-2 rounded-lg text-sm transition-colors',
-            selectedDimId === dim.id ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10',
+            selectedDimId === dim.id ? 'btn-primary' : 'bg-white/5 text-white/60 hover:bg-white/10',
           ]"
           @click="selectDimForIndicators(dim)"
         >
@@ -129,37 +94,15 @@
       </div>
 
       <div v-if="selectedDimId" class="space-y-4">
-        <!-- Add Indicator Form -->
-        <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 class="text-sm font-semibold mb-3">{{ editingInd ? '编辑指标' : '添加指标' }}</h3>
+        <div class="glass-card p-4">
+          <h3 class="text-sm font-semibold mb-3 text-white/70">{{ editingInd ? '编辑指标' : '添加指标' }}</h3>
           <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <input
-              v-model="indForm.name"
-              placeholder="指标名称"
-              class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-            />
-            <input
-              v-model="indForm.criteria"
-              placeholder="评分标准"
-              class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-            />
-            <input
-              v-model.number="indForm.defaultPoints"
-              type="number"
-              placeholder="默认分值"
-              class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-            />
-            <input
-              v-model.number="indForm.dailyLimit"
-              type="number"
-              placeholder="每日上限"
-              class="bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none placeholder:text-white/30"
-            />
+            <input v-model="indForm.name" placeholder="指标名称" class="input-field" />
+            <input v-model="indForm.criteria" placeholder="评分标准" class="input-field" />
+            <input v-model.number="indForm.defaultPoints" type="number" placeholder="默认分值" class="input-field" />
+            <input v-model.number="indForm.dailyLimit" type="number" placeholder="每日上限" class="input-field" />
             <div class="flex gap-2">
-              <button
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex-1"
-                @click="editingInd ? saveIndEdit() : addIndicator()"
-              >
+              <button class="btn-primary flex-1" @click="editingInd ? saveIndEdit() : addIndicator()">
                 {{ editingInd ? '保存' : '添加' }}
               </button>
               <button
@@ -173,34 +116,23 @@
           </div>
         </div>
 
-        <!-- Indicator List -->
         <div class="space-y-2">
           <div
             v-for="ind in indicators"
             :key="ind.id"
-            class="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between"
+            class="glass-card p-3 flex items-center justify-between"
           >
             <div class="flex-1">
               <div class="font-medium text-sm">{{ ind.name }}</div>
               <div class="flex gap-4 text-xs text-white/40 mt-1">
                 <span>标准: {{ ind.criteria || '-' }}</span>
-                <span class="text-yellow-400">+{{ ind.defaultPoints }}</span>
+                <span class="text-[#FFD700]">+{{ ind.defaultPoints }}</span>
                 <span>上限: {{ ind.dailyLimit }}/天</span>
               </div>
             </div>
             <div class="flex gap-2 ml-4">
-              <button
-                class="px-3 py-1 text-xs bg-white/10 text-white/60 rounded hover:bg-white/20 transition-colors"
-                @click="startEditInd(ind)"
-              >
-                编辑
-              </button>
-              <button
-                class="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                @click="deleteIndicator(ind.id)"
-              >
-                删除
-              </button>
+              <button class="px-3 py-1 text-xs bg-white/10 text-white/60 rounded hover:bg-white/20 transition-colors" @click="startEditInd(ind)">编辑</button>
+              <button class="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors" @click="deleteIndicator(ind.id)">删除</button>
             </div>
           </div>
           <div v-if="indicators.length === 0" class="text-center text-white/40 py-4">暂无指标，请添加</div>

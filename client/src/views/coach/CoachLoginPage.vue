@@ -1,12 +1,13 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center px-4">
+  <div class="min-h-screen bg-[#0a1628] flex items-center justify-center px-4">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-white mb-2">星宠契约</h1>
-        <p class="text-blue-300 text-lg">教练登录</p>
+        <div class="text-6xl mb-4">⚽</div>
+        <h1 class="text-3xl font-bold text-white mb-2" style="font-family: var(--font-display)">星宠契约</h1>
+        <p class="text-white/50 text-lg">教练端</p>
       </div>
 
-      <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+      <div class="glass-card p-8">
         <!-- Login Mode -->
         <div v-if="mode === 'login'">
           <div class="mb-4">
@@ -16,7 +17,7 @@
               type="tel"
               maxlength="11"
               placeholder="请输入11位手机号"
-              class="w-full bg-white/5 border border-white/20 text-white rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors placeholder:text-white/30"
+              class="input-field"
             />
           </div>
           <div class="mb-6">
@@ -25,24 +26,24 @@
               v-model="password"
               type="password"
               placeholder="请输入密码"
-              class="w-full bg-white/5 border border-white/20 text-white rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors placeholder:text-white/30"
+              class="input-field"
               @keyup.enter="handleLogin"
             />
           </div>
-          <div v-if="error" class="text-red-400 text-sm mb-4">{{ error }}</div>
+          <div v-if="error" class="text-red-400 text-sm mb-4 text-center">{{ error }}</div>
           <button
             :disabled="loading"
-            class="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg py-3 font-semibold hover:from-blue-500 hover:to-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-primary w-full"
             @click="handleLogin"
           >
             {{ loading ? '登录中...' : '登 录' }}
           </button>
           <p class="text-center mt-4 text-white/50 text-sm">
             还没有账号？
-            <button class="text-blue-400 hover:text-blue-300 transition-colors" @click="mode = 'register'">立即注册</button>
+            <button class="text-[#39FF14] hover:text-green-300 transition-colors" @click="mode = 'register'">立即注册</button>
           </p>
           <p class="text-center mt-2 text-white/50 text-sm">
-            <router-link to="/admin/login" class="text-blue-400 hover:text-blue-300 transition-colors">管理员登录</router-link>
+            <router-link to="/admin/login" class="text-white/40 hover:text-white transition-colors">管理员登录</router-link>
           </p>
         </div>
 
@@ -55,20 +56,20 @@
               type="tel"
               maxlength="11"
               placeholder="请输入11位手机号"
-              class="w-full bg-white/5 border border-white/20 text-white rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors placeholder:text-white/30"
+              class="input-field"
             />
           </div>
-          <p class="text-white/50 text-sm mb-6">注册后默认密码为手机号后六位，享7天免费试用</p>
-          <div v-if="error" class="text-red-400 text-sm mb-4">{{ error }}</div>
+          <p class="text-white/50 text-sm mb-6 text-center">注册后默认密码为手机号后六位，享7天免费试用</p>
+          <div v-if="error" class="text-red-400 text-sm mb-4 text-center">{{ error }}</div>
           <button
             :disabled="loading"
-            class="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg py-3 font-semibold hover:from-blue-500 hover:to-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-primary w-full"
             @click="handleRegister"
           >
             {{ loading ? '注册中...' : '注 册' }}
           </button>
           <p class="text-center mt-4 text-white/50 text-sm">
-            <button class="text-blue-400 hover:text-blue-300 transition-colors" @click="mode = 'login'; error = ''">返回登录</button>
+            <button class="text-[#39FF14] hover:text-green-300 transition-colors" @click="mode = 'login'; error = ''">返回登录</button>
           </p>
         </div>
       </div>
