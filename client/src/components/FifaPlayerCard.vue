@@ -1,58 +1,59 @@
 <template>
-  <div
-    class="fifa-card"
-    :class="[`rating-${ratingTier}`, { light: isLight }]"
-    :style="{ background: cardBg, color: textColor }"
-  >
+  <div class="fifa-card" :class="[`rating-${ratingTier}`, { 'on-light': isLight }]" :style="{ borderColor: accentColor }">
     <div class="foil-shine"></div>
 
-    <div class="card-top">
-      <div class="overall-rating" :style="{ color: accentColor }">
-        <span class="rating-number">{{ stats.overall }}</span>
-        <span class="rating-label">综合</span>
-      </div>
-      <div class="player-info">
-        <span class="player-name">{{ stats.playerName }}</span>
-        <span class="player-points" :style="{ color: subTextColor }">积分 {{ stats.totalPoints }}</span>
-      </div>
-    </div>
-
-    <div class="radar-wrap">
-      <RadarChart
-        :dimensions="radarDimensions"
-        :size="140"
-        :color="accentColor"
-        :fill-color="accentFillColor"
-        :grid-color="isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)'"
-        :label-color="isLight ? '#666666' : '#9ca3af'"
-      />
-    </div>
-
-    <div class="dim-bars">
-      <div class="dim-bar" v-for="dim in stats.dimensions" :key="dim.dimensionId">
-        <span class="dim-icon">{{ dim.icon }}</span>
-        <span class="dim-name">{{ dim.dimensionName }}</span>
-        <div class="bar-track" :style="{ background: trackBg }">
-          <div
-            class="bar-fill"
-            :style="{
-              width: (dim.score / dim.maxScore) * 100 + '%',
-              background: progressColor(dim.score),
-            }"
-          ></div>
+    <div class="card-body">
+      <!-- Left: Rating + Avatar -->
+      <div class="card-left">
+        <div class="overall-rating" :style="{ color: accentColor }">
+          <span class="rating-number">{{ stats.overall }}</span>
+          <span class="rating-label">综合</span>
         </div>
-        <span class="dim-score" :style="{ color: subTextColor }">{{ dim.score }}</span>
+        <div class="player-avatar">{{ stats.avatar }}</div>
+        <div class="player-name">{{ stats.playerName }}</div>
+      </div>
+
+      <!-- Center: Radar + Dimensions -->
+      <div class="card-center">
+        <div class="radar-wrap">
+          <RadarChart
+            :dimensions="radarDimensions"
+            :size="120"
+            :color="accentColor"
+            :fill-color="accentFillColor"
+            grid-color="rgba(255,255,255,0.08)"
+            label-color="rgba(255,255,255,0.5)"
+          />
+        </div>
+
+        <div class="dim-list">
+          <div v-for="dim in stats.dimensions" :key="dim.dimensionId" class="dim-row">
+            <span class="dim-name">{{ dim.icon }} {{ dim.dimensionName }}</span>
+            <div class="dim-bar">
+              <div
+                class="dim-bar-fill"
+                :style="{ width: (dim.score / 99) * 100 + '%', background: scoreColor(dim.score) }"
+              ></div>
+            </div>
+            <span class="dim-score" :style="{ color: scoreColor(dim.score) }">{{ dim.score }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="card-stats">
-      <div class="stat" :style="{ background: statBoxBg }">
-        <label :style="{ color: subTextColor }">今日</label>
-        <span class="stat-value">+{{ stats.todayPoints }}</span>
+    <!-- Bottom Stats -->
+    <div class="card-footer">
+      <div class="stat-pill">
+        <span class="stat-label">今日</span>
+        <span class="stat-value" :style="{ color: accentColor }">+{{ stats.todayPoints }}</span>
       </div>
-      <div class="stat" :style="{ background: statBoxBg }">
-        <label :style="{ color: subTextColor }">周排名</label>
+      <div class="stat-pill">
+        <span class="stat-label">周排名</span>
         <span class="stat-value">#{{ stats.rank }}</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">积分</span>
+        <span class="stat-value">{{ stats.totalPoints }}⭐</span>
       </div>
     </div>
   </div>
@@ -68,47 +69,27 @@ const props = defineProps<{
   theme?: 'dark' | 'light'
 }>()
 
+const isLight = computed(() => props.theme === 'light')
+
 const ratingTier = computed<'gold' | 'silver' | 'bronze'>(() => {
   if (props.stats.overall >= 85) return 'gold'
   if (props.stats.overall >= 70) return 'silver'
   return 'bronze'
 })
 
-const isLight = computed(() => props.theme === 'light')
-
-const cardBg = computed(() => {
-  if (isLight.value) return '#FFFFFF'
-  switch (ratingTier.value) {
-    case 'gold': return 'linear-gradient(135deg, #1a1a2e 0%, #2d1f0a 100%)'
-    case 'silver': return 'linear-gradient(135deg, #1a1a2e 0%, #1f2937 100%)'
-    case 'bronze': return 'linear-gradient(135deg, #1a1a2e 0%, #2a1f0f 100%)'
-  }
-})
-
-const textColor = computed(() => isLight.value ? '#333333' : '#FFFFFF')
-const subTextColor = computed(() => isLight.value ? '#666666' : '#9ca3af')
-const trackBg = computed(() => isLight.value ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.1)')
-const statBoxBg = computed(() => isLight.value ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.05)')
-
 const accentColor = computed(() => {
   switch (ratingTier.value) {
-    case 'gold':
-      return '#FFD700'
-    case 'silver':
-      return '#C0C0C0'
-    case 'bronze':
-      return '#CD7F32'
+    case 'gold': return '#ffd700'
+    case 'silver': return '#c0c0c0'
+    case 'bronze': return '#cd7f32'
   }
 })
 
 const accentFillColor = computed(() => {
   switch (ratingTier.value) {
-    case 'gold':
-      return 'rgba(255, 215, 0, 0.2)'
-    case 'silver':
-      return 'rgba(192, 192, 192, 0.2)'
-    case 'bronze':
-      return 'rgba(205, 127, 50, 0.2)'
+    case 'gold': return 'rgba(255, 215, 0, 0.15)'
+    case 'silver': return 'rgba(192, 192, 192, 0.12)'
+    case 'bronze': return 'rgba(205, 127, 50, 0.12)'
   }
 })
 
@@ -120,15 +101,10 @@ const radarDimensions = computed(() =>
   })),
 )
 
-function progressColor(score: number): string {
-  if (isLight.value) {
-    if (score >= 80) return 'linear-gradient(90deg, #4caf50, #66bb6a)'
-    if (score >= 60) return 'linear-gradient(90deg, #ff9800, #ffb74d)'
-    return 'linear-gradient(90deg, #f44336, #ef5350)'
-  }
-  if (score >= 80) return 'linear-gradient(90deg, #FFD700, #FFA500)'
-  if (score >= 60) return 'linear-gradient(90deg, #22c55e, #16a34a)'
-  return 'linear-gradient(90deg, #3b82f6, #2563eb)'
+function scoreColor(score: number): string {
+  if (score >= 80) return '#ffd700'
+  if (score >= 60) return '#ffffff'
+  return '#9ca3af'
 }
 </script>
 
@@ -139,25 +115,30 @@ function progressColor(score: number): string {
   padding: 20px;
   border: 2px solid transparent;
   overflow: hidden;
-  color: white;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #ffffff;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+}
+
+.fifa-card.on-light {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
 .rating-gold {
   border-color: #ffd700;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.25), inset 0 0 20px rgba(255, 215, 0, 0.05);
 }
 
 .rating-silver {
   border-color: #c0c0c0;
-  box-shadow: 0 0 15px rgba(192, 192, 192, 0.2);
+  box-shadow: 0 0 15px rgba(192, 192, 192, 0.18), inset 0 0 15px rgba(192, 192, 192, 0.03);
 }
 
 .rating-bronze {
   border-color: #cd7f32;
-  box-shadow: 0 0 10px rgba(205, 127, 50, 0.2);
+  box-shadow: 0 0 10px rgba(205, 127, 50, 0.15), inset 0 0 10px rgba(205, 127, 50, 0.03);
 }
 
 .foil-shine {
@@ -169,28 +150,34 @@ function progressColor(score: number): string {
   background: linear-gradient(
     135deg,
     transparent 40%,
-    rgba(255, 255, 255, 0.05) 45%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.05) 55%,
+    rgba(255, 255, 255, 0.04) 45%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 55%,
     transparent 60%
   );
   pointer-events: none;
-  animation: foil-sweep 3s ease-in-out infinite;
+  animation: foil-sweep 4s ease-in-out infinite;
 }
 
 @keyframes foil-sweep {
-  0% {
-    transform: translateX(-100%) translateY(-100%);
-  }
-  100% {
-    transform: translateX(100%) translateY(100%);
-  }
+  0% { transform: translateX(-100%) translateY(-100%); }
+  100% { transform: translateX(100%) translateY(100%); }
 }
 
-.card-top {
+.card-body {
   display: flex;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.card-left {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
+  min-width: 80px;
+  flex-shrink: 0;
 }
 
 .overall-rating {
@@ -201,9 +188,9 @@ function progressColor(score: number): string {
 }
 
 .rating-number {
-  font-size: 48px;
+  font-size: 56px;
   font-weight: 900;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Russo One', 'JetBrains Mono', monospace;
   text-shadow: 0 0 20px currentColor;
 }
 
@@ -212,22 +199,28 @@ function progressColor(score: number): string {
   opacity: 0.7;
   text-transform: uppercase;
   letter-spacing: 2px;
+  margin-top: 4px;
 }
 
-.player-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.player-avatar {
+  font-size: 48px;
+  line-height: 1;
+  margin-top: 4px;
 }
 
 .player-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
+  text-align: center;
+  word-break: break-all;
 }
 
-.player-points {
-  font-size: 12px;
-  color: #9ca3af;
+.card-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .radar-wrap {
@@ -235,79 +228,76 @@ function progressColor(score: number): string {
   justify-content: center;
 }
 
-.dim-bars {
+.dim-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.dim-bar {
+.dim-row {
   display: flex;
-  gap: 6px;
-  font-size: 12px;
   align-items: center;
-}
-
-.dim-icon {
-  width: 20px;
-  text-align: center;
+  gap: 10px;
+  font-size: 13px;
 }
 
 .dim-name {
-  width: 36px;
+  width: 70px;
   flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.bar-track {
+.dim-bar {
   flex: 1;
-  height: 6px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
-.bar-fill {
+.dim-bar-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.6s ease-out;
 }
 
 .dim-score {
-  width: 24px;
+  width: 28px;
   text-align: right;
-  font-weight: 600;
-  color: #d1d5db;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.card-stats {
+.card-footer {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
-.stat {
+.stat-pill {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 6px 8px;
+  gap: 2px;
 }
 
-.stat label {
-  font-size: 11px;
+.stat-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #9ca3af;
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
-  margin-top: 2px;
-}
-
-.fifa-card.light {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 </style>
