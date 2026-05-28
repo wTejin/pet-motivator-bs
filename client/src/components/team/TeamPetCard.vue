@@ -1,5 +1,9 @@
 <template>
-  <div class="team-pet-card" :class="`stage-${petStage}`" @click="$emit('click')">
+  <div
+    class="team-pet-card"
+    :class="[`stage-${petStage}`, { disabled: clickable === false }]"
+    @click="clickable !== false && $emit('click')"
+  >
     <!-- 宠物展示区 -->
     <div class="pet-stage-area">
       <template v-if="petImageUrl">
@@ -72,6 +76,7 @@ const props = defineProps<{
   } | null
   accessories?: AccessoryItem[]
   floatingPoints?: number
+  clickable?: boolean
 }>()
 
 defineEmits<{
@@ -251,5 +256,14 @@ function accStyle(acc: AccessoryItem) {
 @keyframes float-up {
   0% { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+}
+
+.team-pet-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.team-pet-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 </style>

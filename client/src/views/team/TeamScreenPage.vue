@@ -31,11 +31,17 @@
             :avatar="player.avatar"
             :current-points="player.currentPoints"
             :pet="player.pet"
+            :clickable="isOpenMode"
             @click="goToPlayer(player.id)"
           />
         </div>
       </main>
     </div>
+
+    <!-- Toast 提示 -->
+    <Transition name="toast">
+      <div v-if="toastMsg" class="screen-toast">{{ toastMsg }}</div>
+    </Transition>
   </div>
 </template>
 
@@ -97,6 +103,9 @@ const ranking = ref<RankingItem[]>([])
 const activities = ref<ActivityItem[]>([])
 const loading = ref(true)
 const error = ref('')
+const isOpenMode = ref(true)
+const toastMsg = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -108,10 +117,11 @@ async function loadData() {
   }
 
   try {
-    const [playersRes, rankRes, actRes] = await Promise.all([
+    const [playersRes, rankRes, actRes, modeRes] = await Promise.all([
       publicApi.getPlayers(phone),
       publicApi.getLeaderboard(phone),
       publicApi.getActivities(phone),
+      publicApi.getMode(phone).catch(() => ({ data: { success: false } })),
     ])
 
     if (playersRes.data.success) {
@@ -124,6 +134,10 @@ async function loadData() {
       activities.value = actRes.data.data || []
     }
 
+    if (modeRes.data.success) {
+      isOpenMode.value = modeRes.data.data?.playerMode === 'open'
+    }
+
     teamName.value = '星宠小队'
   } catch (e: any) {
     error.value = e.response?.data?.error || '加载失败，请检查网络'
@@ -133,7 +147,17 @@ async function loadData() {
 }
 
 function goToPlayer(playerId: string) {
-  router.push(`/player/${playerId}`)
+  if (!isOpenMode.value) {
+    showToast('教练已暂停操作')
+    return
+  }
+  router.push(`/player/${playerId}?c=${phone}`)
+}
+
+function showToast(msg: string) {
+  toastMsg.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMsg.value = '' }, 2000)
 }
 
 function startPolling() {
@@ -237,5 +261,19 @@ onUnmounted(() => {
   .pet-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.screen-toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 14px;
+  z-index: 100;
+  pointer-events: none;
 }
 </style>
