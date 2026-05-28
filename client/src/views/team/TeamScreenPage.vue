@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { publicApi } from '@/api'
 import TeamHeader from '@/components/team/TeamHeader.vue'
@@ -125,7 +125,7 @@ interface ActivityItem {
 const route = useRoute()
 const router = useRouter()
 
-const phone = route.query.c as string
+const phone = computed(() => route.query.c as string)
 const teamName = ref('星宠小队')
 const teamLogo = ref('')
 const players = ref<PlayerInfo[]>([])
@@ -149,18 +149,19 @@ function enterScreen() {
 }
 
 async function loadData() {
-  if (!phone) {
+  const p = phone.value
+  if (!p) {
     loading.value = false
     return
   }
 
   try {
     const [playersRes, rankRes, actRes, modeRes, coachRes] = await Promise.all([
-      publicApi.getPlayers(phone),
-      publicApi.getLeaderboard(phone),
-      publicApi.getActivities(phone),
-      publicApi.getMode(phone).catch(() => ({ data: { success: false } })),
-      publicApi.getCoach(phone),
+      publicApi.getPlayers(p),
+      publicApi.getLeaderboard(p),
+      publicApi.getActivities(p),
+      publicApi.getMode(p).catch(() => ({ data: { success: false } })),
+      publicApi.getCoach(p),
     ])
 
     if (playersRes.data.success) {
@@ -198,7 +199,9 @@ function goToPlayer(playerId: string) {
     showToast('教练已暂停操作')
     return
   }
-  router.push(`/player/${playerId}?c=${phone}`)
+  const p = phone.value
+  if (!p) return
+  router.push(`/player/${playerId}?c=${p}`)
 }
 
 function showToast(msg: string) {
@@ -227,6 +230,17 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopPolling()
+})
+
+watch(phone, (newPhone, oldPhone) => {
+  if (newPhone !== oldPhone) {
+    loading.value = true
+    error.value = ''
+    players.value = []
+    ranking.value = []
+    activities.value = []
+    loadData()
+  }
 })
 </script>
 
@@ -382,6 +396,7 @@ onUnmounted(() => {
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: white;
+  color: #333;
   font-size: 16px;
   outline: none;
   text-align: center;
