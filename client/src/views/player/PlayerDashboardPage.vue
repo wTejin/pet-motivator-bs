@@ -33,6 +33,7 @@
           <FifaPlayerCard
             v-if="playerStats"
             :stats="playerStats"
+            :dimension-defs="dimensionDefs"
             theme="light"
           />
           <div v-else class="card-placeholder">
@@ -142,6 +143,7 @@ interface PetData {
 
 const pet = ref<PetData | null>(null)
 const playerStats = ref<PlayerStats | null>(null)
+const dimensionDefs = ref<any[]>([])
 const currentPoints = ref(0)
 const loading = ref(true)
 const error = ref('')
@@ -167,6 +169,14 @@ async function loadData() {
         }
       } catch (e) {
         console.warn('Failed to load player stats', e)
+      }
+      try {
+        const dimRes = await publicApi.getDimensions(coachPhone.value)
+        if (dimRes.data.success) {
+          dimensionDefs.value = dimRes.data.data
+        }
+      } catch (e) {
+        console.warn('Failed to load dimensions', e)
       }
     }
   } catch (e: any) {
@@ -338,7 +348,7 @@ async function handlePlay() {
   min-width: 0;
   background: white;
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
@@ -361,6 +371,8 @@ async function handlePlay() {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  transform: scale(1.2);
+  margin: 16px 0;
 }
 
 .pet-name-display {
@@ -427,11 +439,11 @@ async function handlePlay() {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 16px;
-  border-radius: 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -452,7 +464,7 @@ async function handlePlay() {
 }
 
 .btn-icon {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 /* ===== Points ===== */

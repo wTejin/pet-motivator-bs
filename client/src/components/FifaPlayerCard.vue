@@ -2,19 +2,12 @@
   <div class="fifa-card" :class="[`rating-${ratingTier}`, { 'on-light': isLight }]" :style="{ borderColor: accentColor }">
     <div class="foil-shine"></div>
 
-    <div class="card-body">
-      <!-- Left: Rating + Avatar -->
+    <div class="card-main">
+      <!-- Left column: photo frame + radar -->
       <div class="card-left">
-        <div class="overall-rating" :style="{ color: accentColor }">
-          <span class="rating-number">{{ stats.overall }}</span>
-          <span class="rating-label">综合</span>
+        <div class="photo-frame">
+          <div class="player-avatar">{{ stats.avatar }}</div>
         </div>
-        <div class="player-avatar">{{ stats.avatar }}</div>
-        <div class="player-name">{{ stats.playerName }}</div>
-      </div>
-
-      <!-- Center: Radar + Dimensions -->
-      <div class="card-center">
         <div class="radar-wrap">
           <RadarChart
             :dimensions="radarDimensions"
@@ -25,35 +18,31 @@
             label-color="rgba(255,255,255,0.5)"
           />
         </div>
+      </div>
 
-        <div class="dim-list">
-          <div v-for="dim in stats.dimensions" :key="dim.dimensionId" class="dim-row">
-            <span class="dim-name">{{ dim.icon }} {{ dim.dimensionName }}</span>
-            <div class="dim-bar">
-              <div
-                class="dim-bar-fill"
-                :style="{ width: (dim.score / 99) * 100 + '%', background: scoreColor(dim.score) }"
-              ></div>
-            </div>
-            <span class="dim-score" :style="{ color: scoreColor(dim.score) }">{{ dim.score }}</span>
+      <!-- Right column: dimension scores + indicators -->
+      <div class="card-right">
+        <div class="dim-scores-row">
+          <div
+            v-for="dim in stats.dimensions"
+            :key="dim.dimensionId"
+            class="dim-score-pill"
+          >
+            <span class="dim-score-name">{{ dim.dimensionName }}</span>
+            <span class="dim-score-value" :style="{ color: scoreColor(dim.score) }">{{ dim.score }}</span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Bottom Stats -->
-    <div class="card-footer">
-      <div class="stat-pill">
-        <span class="stat-label">今日</span>
-        <span class="stat-value" :style="{ color: accentColor }">+{{ stats.todayPoints }}</span>
-      </div>
-      <div class="stat-pill">
-        <span class="stat-label">周排名</span>
-        <span class="stat-value">#{{ stats.rank }}</span>
-      </div>
-      <div class="stat-pill">
-        <span class="stat-label">积分</span>
-        <span class="stat-value">{{ stats.totalPoints }}⭐</span>
+        <div v-if="dimensionDefs && dimensionDefs.length" class="indicators-grid">
+          <div
+            v-for="ind in flattenedIndicators"
+            :key="ind.id"
+            class="indicator-row"
+          >
+            <span class="indicator-name">{{ ind.name }}</span>
+            <span class="indicator-dim">{{ ind.dimAbbr }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -67,6 +56,12 @@ import RadarChart from './RadarChart.vue'
 const props = defineProps<{
   stats: PlayerStats
   theme?: 'dark' | 'light'
+  dimensionDefs?: {
+    id: string
+    name: string
+    icon: string
+    indicators: { id: string; name: string }[]
+  }[]
 }>()
 
 const isLight = computed(() => props.theme === 'light')
@@ -100,6 +95,18 @@ const radarDimensions = computed(() =>
     maxValue: 99,
   })),
 )
+
+const flattenedIndicators = computed(() => {
+  const defs = props.dimensionDefs || []
+  const result: { id: string; name: string; dimAbbr: string }[] = []
+  for (const dim of defs) {
+    const abbr = dim.name.charAt(0)
+    for (const ind of dim.indicators || []) {
+      result.push({ id: ind.id, name: ind.name, dimAbbr: abbr })
+    }
+  }
+  return result
+})
 
 function scoreColor(score: number): string {
   if (score >= 80) return '#ffd700'
@@ -164,63 +171,36 @@ function scoreColor(score: number): string {
   100% { transform: translateX(100%) translateY(100%); }
 }
 
-.card-body {
+.card-main {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   position: relative;
   z-index: 1;
 }
 
 .card-left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 80px;
+  width: 140px;
   flex-shrink: 0;
-}
-
-.overall-rating {
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1;
+  gap: 12px;
 }
 
-.rating-number {
-  font-size: 56px;
-  font-weight: 900;
-  font-family: 'Russo One', 'JetBrains Mono', monospace;
-  text-shadow: 0 0 20px currentColor;
-}
-
-.rating-label {
-  font-size: 12px;
-  opacity: 0.7;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-top: 4px;
+.photo-frame {
+  width: 100%;
+  border-radius: 12px;
+  padding: 8px;
+  border: 2px solid v-bind(accentColor);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .player-avatar {
-  font-size: 48px;
+  font-size: 64px;
   line-height: 1;
-  margin-top: 4px;
-}
-
-.player-name {
-  font-size: 16px;
-  font-weight: 700;
-  text-align: center;
-  word-break: break-all;
-}
-
-.card-center {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .radar-wrap {
@@ -228,76 +208,60 @@ function scoreColor(score: number): string {
   justify-content: center;
 }
 
-.dim-list {
+.card-right {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.dim-scores-row {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.dim-row {
+.dim-score-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
+  gap: 6px;
 }
 
-.dim-name {
-  width: 70px;
-  flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.8);
+.dim-score-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dim-score-value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.indicators-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+}
+
+.indicator-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.indicator-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.dim-bar {
-  flex: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.dim-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.6s ease-out;
-}
-
-.dim-score {
-  width: 28px;
-  text-align: right;
-  font-weight: 700;
+.indicator-dim {
   flex-shrink: 0;
-}
-
-.card-footer {
-  display: flex;
-  gap: 10px;
-  position: relative;
-  z-index: 1;
-}
-
-.stat-pill {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 6px 8px;
-  gap: 2px;
-}
-
-.stat-label {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.stat-value {
-  font-size: 14px;
-  font-weight: 700;
+  opacity: 0.5;
 }
 </style>
