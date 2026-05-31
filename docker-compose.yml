@@ -21,6 +21,7 @@ services:
       PORT: 3000
     volumes:
       - avatars_data:/app/public/avatars
+      - pet_images_data:/app/public/images
     depends_on:
       - postgres
     restart: unless-stopped
@@ -39,3 +40,4 @@ services:
 volumes:
   pgdata:
   avatars_data:
+  pet_images_data:
