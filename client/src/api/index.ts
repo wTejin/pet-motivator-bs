@@ -18,9 +18,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    const url = error.config?.url || ''
+    if (status === 401) {
       localStorage.removeItem('token')
       window.location.hash = '#/login'
+    }
+    if (status === 403) {
+      localStorage.removeItem('token')
+      // Admin 路径的 403 → 跳转 admin 登录页；其他路径跳转 coach 登录页
+      window.location.hash = url.startsWith('/admin') ? '#/admin/login' : '#/login'
     }
     return Promise.reject(error)
   },
@@ -43,11 +50,31 @@ export const adminApi = {
   updateCoach(id: string, data: Record<string, unknown>) {
     return api.put(`/admin/coaches/${id}`, data)
   },
+  resetCoachPassword(id: string) {
+    return api.put(`/admin/coaches/${id}/reset-password`)
+  },
   getStats() {
     return api.get('/admin/stats')
   },
   importPetSpecies(data: unknown) {
     return api.post('/admin/pet-species', data)
+  },
+  getPetSpecies() {
+    return api.get('/admin/pet-species')
+  },
+  createPetSpecies(data: Record<string, unknown>) {
+    return api.post('/admin/pet-species', data)
+  },
+  updatePetSpecies(id: string, data: Record<string, unknown>) {
+    return api.put(`/admin/pet-species/${id}`, data)
+  },
+  deletePetSpecies(id: string) {
+    return api.delete(`/admin/pet-species/${id}`)
+  },
+  uploadImage(data: FormData) {
+    return api.post('/admin/upload-image', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   },
   importAccessories(data: unknown) {
     return api.post('/admin/accessories', data)
@@ -72,8 +99,8 @@ export const adminApi = {
 // ── Coach API ────────────────────────────────────────────────────────────────
 
 export const coachApi = {
-  register(phone: string, password?: string) {
-    return api.post('/coach/register', { phone, password })
+  register(phone: string, password?: string, school?: string) {
+    return api.post('/coach/register', { phone, password, school })
   },
   login(phone: string, password: string) {
     return api.post('/coach/login', { phone, password })
@@ -254,5 +281,14 @@ export const publicApi = {
   },
   getCoach(phone: string) {
     return api.get(`/public/coach/${phone}`)
+  },
+  getPetSpecies() {
+    return api.get('/public/pet-species')
+  },
+  createPlayerPet(playerId: string, speciesId: string) {
+    return api.post(`/public/player/${playerId}/pet/create`, { speciesId })
+  },
+  checkin(playerId: string) {
+    return api.post(`/public/player/${playerId}/checkin`)
   },
 }

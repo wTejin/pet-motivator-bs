@@ -71,10 +71,6 @@
             <span class="points-num">{{ player.currentPoints }}</span>
             <span class="points-label">当前积分</span>
           </div>
-          <div class="points-lifetime">
-            <span class="points-num">{{ player.lifetimePoints }}</span>
-            <span class="points-label">累计积分</span>
-          </div>
         </div>
         <div class="card-actions">
           <button class="act-btn edit" @click="startEdit(player)">编辑</button>
@@ -201,7 +197,6 @@ interface PlayerItem {
   avatar: string
   age: number | null
   currentPoints: number
-  lifetimePoints: number
   isActive: boolean
 }
 
@@ -624,8 +619,7 @@ async function deletePlayerItem(id: string) {
   gap: 6px;
 }
 
-.points-current,
-.points-lifetime {
+.points-current {
   flex: 1;
   background: rgba(0, 0, 0, 0.03);
   border-radius: 8px;

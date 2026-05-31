@@ -1,16 +1,16 @@
 <template>
-  <div class="magic-shop -m-4 md:-m-6 p-4 md:p-6 min-h-[calc(100vh-48px)]" style="background: linear-gradient(135deg, #e3f2fd, #e8f5e9); color: #333;">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="page-title">🏪 魔法集市</h2>
-      <span class="page-sub">管理全局商品配置</span>
-    </div>
-
+  <div class="magic-shop" style="color: #333;">
     <!-- Add / Edit Form -->
     <div class="form-card">
       <div class="form-header">{{ editingItem ? '✏️ 编辑商品' : '➕ 添加商品' }}</div>
       <div class="form-body">
         <div class="form-row">
+          <div class="form-field short">
+            <label class="field-label">图标</label>
+            <button class="emoji-picker-btn" @click="showEmojiPicker = true">
+              <span class="emoji-preview">{{ shopForm.emoji || '📦' }}</span>
+            </button>
+          </div>
           <div class="form-field">
             <label class="field-label">物品名称</label>
             <input v-model="shopForm.name" placeholder="如：能量果实" class="field-input" />
@@ -21,8 +21,25 @@
               <option value="food">食物类</option>
               <option value="accessory">配饰类</option>
               <option value="background">背景类</option>
+              <option value="toy">玩具类</option>
               <option value="magic">魔法类</option>
             </select>
+          </div>
+          <div class="form-field">
+            <label class="field-label">使用机制</label>
+            <select v-model="shopForm.usageType" class="field-input">
+              <option value="consume">🍽️ 消耗型（用一次少一个）</option>
+              <option value="equip">👑 装备型（永久拥有）</option>
+              <option value="rent">⏳ 租赁型（首次装备后计时到期）</option>
+              <option value="charge">🎮 次数型（使用 N 次后消失）</option>
+              <option value="replace">🖼️ 替换型（背景类，永久）</option>
+            </select>
+          </div>
+          <div class="form-field short" v-if="shopForm.usageType === 'rent' || shopForm.usageType === 'charge'">
+            <label class="field-label">
+              {{ shopForm.usageType === 'rent' ? '有效期（天）' : '可用次数' }}
+            </label>
+            <input v-model.number="shopForm.usageCount" type="number" :placeholder="shopForm.usageType === 'rent' ? '7' : '5'" class="field-input" />
           </div>
           <div class="form-field short">
             <label class="field-label">价格</label>
@@ -42,8 +59,18 @@
             <label class="field-label">描述</label>
             <input v-model="shopForm.description" placeholder="简短描述" class="field-input" />
           </div>
+          <div class="form-field">
+            <label class="field-label">商品图片</label>
+            <div class="image-upload-row">
+              <input v-model="shopForm.imageUrl" placeholder="图片 URL 或点击上传" class="field-input" />
+              <button class="btn-upload" @click="shopImageInput?.click()">📷 上传</button>
+              <input ref="shopImageInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden-input" @change="handleShopImageUpload" />
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
           <div class="form-field short">
-            <label class="field-label">饥饿效果</label>
+            <label class="field-label">饱食效果</label>
             <input v-model.number="effectForm.hunger" type="number" placeholder="0" class="field-input" />
           </div>
           <div class="form-field short">
@@ -51,8 +78,16 @@
             <input v-model.number="effectForm.mood" type="number" placeholder="0" class="field-input" />
           </div>
           <div class="form-field short">
-            <label class="field-label">经验效果</label>
-            <input v-model.number="effectForm.experience" type="number" placeholder="0" class="field-input" />
+            <label class="field-label">成长效果</label>
+            <input v-model.number="effectForm.carePoints" type="number" placeholder="0" class="field-input" />
+          </div>
+          <div class="form-field short">
+            <label class="field-label">装备装饰ID</label>
+            <input v-model="effectForm.decoration" placeholder="如：bow" class="field-input" />
+          </div>
+          <div class="form-field short">
+            <label class="field-label">背景ID</label>
+            <input v-model="effectForm.backgroundId" placeholder="如：forest" class="field-input" />
           </div>
         </div>
         <div class="form-actions">
@@ -77,6 +112,29 @@
       </button>
     </div>
 
+    <!-- Emoji Picker Modal -->
+    <Teleport to="body">
+      <div v-if="showEmojiPicker" class="modal-overlay" @click.self="showEmojiPicker = false">
+        <div class="picker-card">
+          <div class="picker-header">
+            <span class="picker-title">选择图标</span>
+            <button class="picker-close" @click="showEmojiPicker = false">✕</button>
+          </div>
+          <div class="emoji-grid">
+            <button
+              v-for="emoji in emojiList"
+              :key="emoji"
+              class="emoji-option"
+              :class="{ selected: shopForm.emoji === emoji }"
+              @click="selectEmoji(emoji)"
+            >
+              {{ emoji }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Items Grid -->
     <div class="items-grid">
       <div
@@ -86,6 +144,16 @@
         :class="{ inactive: !item.isActive }"
       >
         <div class="item-header">
+          <div class="item-preview">
+            <img
+              v-if="item.imageUrl"
+              :src="item.imageUrl"
+              class="preview-img"
+              alt="icon"
+              @error="item.imageUrl = ''"
+            />
+            <span v-else class="preview-emoji">{{ item.emoji || '📦' }}</span>
+          </div>
           <div class="item-name">{{ item.name }}</div>
           <span class="item-badge" :class="item.type">{{ typeLabel(item.type) }}</span>
         </div>
@@ -119,16 +187,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { adminApi } from '@/api'
+import type { ShopItemType, ShopItemUsageType } from '../../../../shared/types'
 
 interface ShopItem {
   id: string
   name: string
   description: string
+  emoji?: string
   type: string
+  usageType?: string
+  usageCount?: number | null
   price: number
   stock: number
   isActive: boolean
   effect: any
+  imageUrl?: string
   imageClass: string
   sortOrder: number
 }
@@ -136,23 +209,38 @@ interface ShopItem {
 const items = ref<ShopItem[]>([])
 const editingItem = ref<ShopItem | null>(null)
 const activeCategory = ref('all')
+const showEmojiPicker = ref(false)
+const shopImageInput = ref<HTMLInputElement | null>(null)
+
+const emojiList = [
+  '🍖', '🥫', '🍫', '🎀', '🧣', '👑', '🌲', '🌌', '⚽', '🥏', '🤖', '🧪', '🧚',
+  '📦', '🍎', '🍇', '🥕', '🍗', '🍕', '🍪', '🍩', '🧁', '🍿', '🥤', '🧃',
+  '🎁', '🎈', '🎉', '🎊', '🎋', '🎍', '🎎', '🎏', '🎐', '🎑', '🧸', '🪀',
+  '⭐', '✨', '💫', '🔥', '💎', '💍', '👓', '🕶️', '👜', '👟', '🧤', '🧦',
+  '🌟', '🌈', '☀️', '🌙', '⚡', '❄️', '🌊', '🍀', '🌸', '🌺', '🌻', '🌹',
+]
 
 const shopForm = ref({
   name: '',
   description: '',
-  type: 'food',
+  emoji: '📦',
+  type: 'food' as ShopItemType,
+  usageType: 'consume' as ShopItemUsageType,
+  usageCount: null as number | null,
   price: 0,
   stock: 999,
+  imageUrl: '',
   sortOrder: 0,
 })
 
-const effectForm = ref({ hunger: 0, mood: 0, experience: 0 })
+const effectForm = ref({ hunger: 0, mood: 0, carePoints: 0, decoration: '', backgroundId: '' })
 
 const categoryTabs = [
   { value: 'all', label: '全部', icon: '📦' },
   { value: 'food', label: '食物类', icon: '🍎' },
   { value: 'accessory', label: '配饰类', icon: '🎀' },
   { value: 'background', label: '背景类', icon: '🖼️' },
+  { value: 'toy', label: '玩具类', icon: '🧸' },
   { value: 'magic', label: '魔法类', icon: '✨' },
 ]
 
@@ -177,6 +265,7 @@ function typeLabel(type: string): string {
     food: '食物类',
     accessory: '配饰类',
     background: '背景类',
+    toy: '玩具类',
     magic: '魔法类',
   }
   return map[type] || type
@@ -184,8 +273,13 @@ function typeLabel(type: string): string {
 
 function effectValue(effect: any, key: string): number | null {
   if (!effect || typeof effect !== 'object') return null
-  const val = effect[key]
-  return val ? Number(val) : null
+  // 优先从新格式 effect.consume 中读取
+  const consumeVal = effect.consume?.[key]
+  if (consumeVal != null) return Number(consumeVal)
+  // 兼容旧格式直接字段
+  const directVal = effect[key]
+  if (directVal != null) return Number(directVal)
+  return null
 }
 
 function startEdit(item: ShopItem) {
@@ -193,23 +287,75 @@ function startEdit(item: ShopItem) {
   shopForm.value = {
     name: item.name,
     description: item.description,
-    type: item.type,
+    emoji: item.emoji || '📦',
+    type: item.type as ShopItemType,
+    usageType: (item.usageType || 'consume') as ShopItemUsageType,
+    usageCount: item.usageCount ?? null,
     price: item.price,
     stock: item.stock,
-    sortOrder: item.sortOrder || 0,
+    imageUrl: item.imageUrl || '',
+    sortOrder: item.sortOrder,
   }
   const eff = item.effect || {}
+  const consumeEff = eff.consume || eff
+  const equipEff = eff.equip || {}
   effectForm.value = {
-    hunger: eff.hunger || 0,
-    mood: eff.mood || 0,
-    experience: eff.experience || 0,
+    hunger: consumeEff.hunger || 0,
+    mood: consumeEff.mood || consumeEff.experience || 0,
+    carePoints: consumeEff.carePoints || 0,
+    decoration: equipEff.decoration || '',
+    backgroundId: equipEff.backgroundId || '',
   }
 }
 
 function cancelEdit() {
   editingItem.value = null
-  shopForm.value = { name: '', description: '', type: 'food', price: 0, stock: 999, sortOrder: 0 }
-  effectForm.value = { hunger: 0, mood: 0, experience: 0 }
+  shopForm.value = { name: '', description: '', emoji: '📦', type: 'food', usageType: 'consume', usageCount: null, price: 0, stock: 999, imageUrl: '', sortOrder: 0 }
+  effectForm.value = { hunger: 0, mood: 0, carePoints: 0, decoration: '', backgroundId: '' }
+}
+
+function selectEmoji(emoji: string) {
+  shopForm.value.emoji = emoji
+  showEmojiPicker.value = false
+}
+
+async function handleShopImageUpload(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  if (file.size > 2 * 1024 * 1024) {
+    alert('文件大小不能超过 2MB')
+    return
+  }
+  const formData = new FormData()
+  formData.append('image', file)
+  try {
+    const res = await adminApi.uploadImage(formData)
+    if (res.data.success) {
+      shopForm.value.imageUrl = res.data.data.url
+    }
+  } catch (err: any) {
+    alert(err.response?.data?.error || '上传失败')
+  }
+  target.value = ''
+}
+
+function buildEffect() {
+  const eff: any = {}
+  if (shopForm.value.usageType === 'consume') {
+    const consume: any = {}
+    if (effectForm.value.hunger) consume.hunger = Number(effectForm.value.hunger)
+    if (effectForm.value.mood) consume.mood = Number(effectForm.value.mood)
+    if (effectForm.value.carePoints) consume.carePoints = Number(effectForm.value.carePoints)
+    eff.consume = consume
+  } else {
+    const equip: any = {}
+    if (effectForm.value.mood) equip.moodBonus = Number(effectForm.value.mood)
+    if (effectForm.value.decoration) equip.decoration = effectForm.value.decoration
+    if (effectForm.value.backgroundId) equip.backgroundId = effectForm.value.backgroundId
+    eff.equip = equip
+  }
+  return eff
 }
 
 async function addItem() {
@@ -217,7 +363,7 @@ async function addItem() {
   try {
     await adminApi.createShopItem({
       ...shopForm.value,
-      effect: { ...effectForm.value },
+      effect: buildEffect(),
     })
     cancelEdit()
     await loadItems()
@@ -231,7 +377,7 @@ async function saveEdit() {
   try {
     await adminApi.updateShopItem(editingItem.value.id, {
       ...shopForm.value,
-      effect: { ...effectForm.value },
+      effect: buildEffect(),
     })
     cancelEdit()
     await loadItems()
@@ -265,13 +411,23 @@ async function deleteItem(id: string) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
   color: #1a1a2e;
-  font-family: var(--font-display);
   margin: 0;
 }
 
@@ -350,6 +506,59 @@ async function deleteItem(id: string) {
 .field-input:focus {
   border-color: #42a5f5;
   box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15);
+}
+
+.emoji-picker-btn {
+  width: 100%;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+}
+
+.emoji-picker-btn:hover {
+  border-color: #42a5f5;
+}
+
+.emoji-preview {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.image-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.image-upload-row .field-input {
+  flex: 1;
+}
+
+.btn-upload {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(66, 165, 245, 0.1);
+  color: #1e88e5;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btn-upload:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
+.hidden-input {
+  display: none;
 }
 
 .form-actions {
@@ -472,6 +681,27 @@ async function deleteItem(id: string) {
   gap: 8px;
 }
 
+.item-preview {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.preview-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+
 .item-name {
   font-size: 14px;
   font-weight: 700;
@@ -479,6 +709,7 @@ async function deleteItem(id: string) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 .item-badge {
@@ -594,5 +825,92 @@ async function deleteItem(id: string) {
 .empty-icon {
   font-size: 40px;
   opacity: 0.5;
+}
+
+/* Emoji Picker Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.picker-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.picker-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.picker-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+
+.emoji-option {
+  font-size: 24px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-option:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.emoji-option.selected {
+  border-color: #42a5f5;
+  background: rgba(66, 165, 245, 0.1);
 }
 </style>

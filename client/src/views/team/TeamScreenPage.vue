@@ -53,6 +53,9 @@
             :avatar="player.avatar"
             :current-points="player.currentPoints"
             :pet="player.pet"
+            :accessories="player.pet?.accessories"
+            :background-url="player.pet?.background?.imageUrl || undefined"
+            :background-css="player.pet?.background?.cssGradient || undefined"
             :clickable="isOpenMode"
             @click="goToPlayer(player.id)"
           />
@@ -66,6 +69,38 @@
         🔐 教练员入口
       </router-link>
     </div>
+
+    <!-- 宠物选择弹窗 -->
+    <Transition name="modal">
+      <div v-if="showPetPicker" class="pet-picker-overlay" @click.self="showPetPicker = false">
+        <div class="pet-picker-modal">
+          <div class="picker-header">
+            <h3 class="picker-title">选择你的宠物</h3>
+            <button class="picker-close" @click="showPetPicker = false">✕</button>
+          </div>
+          <div v-if="petSpeciesList.length === 0" class="picker-empty">加载中...</div>
+          <div v-else class="picker-grid">
+            <div
+              v-for="s in petSpeciesList"
+              :key="s.id"
+              class="picker-card"
+              @click="selectSpecies(s.id)"
+            >
+              <div class="picker-preview">
+                <img
+                  v-if="getAdultStage(s)?.imageUrl"
+                  :src="getAdultStage(s)!.imageUrl"
+                  class="picker-img"
+                  :alt="s.name"
+                />
+                <span v-else class="picker-emoji">{{ getAdultStage(s)?.emoji || s.emoji }}</span>
+              </div>
+              <span class="picker-name">{{ s.name }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Toast 提示 -->
     <Transition name="toast">
@@ -94,6 +129,15 @@ interface PetInfo {
     }>
   }
   equippedDecorations?: string[]
+  accessories?: Array<{
+    id: string
+    imageUrl: string
+    position: { top: string; left: string; scale: number }
+  }>
+  background?: {
+    cssGradient?: string
+    imageUrl?: string
+  } | null
 }
 
 interface PlayerInfo {
@@ -137,6 +181,28 @@ const isOpenMode = ref(true)
 const toastMsg = ref('')
 const coachPhoneInput = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+interface SpeciesStage {
+  emoji: string
+  imageUrl?: string
+  label?: string
+}
+interface SpeciesOption {
+  id: string
+  name: string
+  emoji: string
+  stages?: Record<string, SpeciesStage>
+}
+const showPetPicker = ref(false)
+const petSpeciesList = ref<SpeciesOption[]>([])
+const selectedPlayerId = ref('')
+
+function getAdultStage(species: SpeciesOption): SpeciesStage | null {
+  const stages = species.stages
+  if (!stages) return null
+  const adult = stages.level3 || stages.adult
+  return adult || null
+}
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -199,9 +265,44 @@ function goToPlayer(playerId: string) {
     showToast('教练已暂停操作')
     return
   }
+  const player = players.value.find(pl => pl.id === playerId)
+  if (!player) return
+  if (!player.pet) {
+    selectedPlayerId.value = playerId
+    loadPetSpecies()
+    showPetPicker.value = true
+    return
+  }
   const p = phone.value
   if (!p) return
   router.push(`/player/${playerId}?c=${p}`)
+}
+
+async function loadPetSpecies() {
+  try {
+    const res = await publicApi.getPetSpecies()
+    if (res.data.success) {
+      petSpeciesList.value = res.data.data || []
+    }
+  } catch {
+    showToast('加载宠物列表失败')
+  }
+}
+
+async function selectSpecies(speciesId: string) {
+  if (!selectedPlayerId.value) return
+  try {
+    const res = await publicApi.createPlayerPet(selectedPlayerId.value, speciesId)
+    if (res.data.success) {
+      showToast('宠物选择成功！')
+      showPetPicker.value = false
+      loadData()
+    } else {
+      showToast(res.data.error || '选择失败')
+    }
+  } catch (e: any) {
+    showToast(e.response?.data?.error || '选择失败')
+  }
 }
 
 function showToast(msg: string) {
@@ -263,8 +364,8 @@ watch(phone, (newPhone, oldPhone) => {
 }
 
 .screen-sidebar {
-  width: 20%;
-  min-width: 180px;
+  width: 14%;
+  min-width: 130px;
   flex-shrink: 0;
 }
 
@@ -275,7 +376,7 @@ watch(phone, (newPhone, oldPhone) => {
 
 .pet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 16px;
 }
 
@@ -305,9 +406,13 @@ watch(phone, (newPhone, oldPhone) => {
   .screen-sidebar {
     width: 100%;
     height: auto;
+    order: 2;
   }
   .screen-body {
     flex-direction: column;
+  }
+  .screen-main {
+    order: 1;
   }
   .pet-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -423,6 +528,25 @@ watch(phone, (newPhone, oldPhone) => {
   opacity: 0.9;
 }
 
+
+.install-card a {
+  color: #7c3aed;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.install-card b {
+  color: #7c3aed;
+}
+.install-icon {
+  font-size: 1.2em;
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .desktop-only { display: none !important; }
+}
+@media (min-width: 768px) {
+  .mobile-only { display: none !important; }
+}
 .entry-coach-link {
   display: inline-flex;
   align-items: center;
@@ -449,5 +573,132 @@ watch(phone, (newPhone, oldPhone) => {
   font-size: 14px;
   z-index: 100;
   pointer-events: none;
+}
+
+/* 宠物选择弹窗 */
+.pet-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.pet-picker-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.picker-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.picker-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.picker-close:hover {
+  background: #e0e0e0;
+}
+
+.picker-empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 14px;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.picker-card:hover {
+  background: #e3f2fd;
+  border-color: #42a5f5;
+  transform: translateY(-2px);
+}
+
+.picker-preview {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.picker-img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.picker-emoji {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.picker-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 弹窗动画 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.25s;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 </style>

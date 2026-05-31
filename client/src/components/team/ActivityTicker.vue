@@ -9,7 +9,7 @@
           class="ticker-item"
           :class="`type-${activity.type}`"
         >
-          <span class="ticker-avatar">{{ activity.playerAvatar }}</span>
+          <span class="ticker-avatar">{{ cleanAvatar(activity.playerAvatar) }}</span>
           <span class="ticker-text">{{ activity.playerName }} {{ activity.description }}</span>
           <span v-if="activity.points && activity.points > 0" class="ticker-points">+{{ activity.points }}</span>
           <span v-if="index < activities.length - 1" class="ticker-sep">•</span>
@@ -36,6 +36,15 @@ const props = defineProps<{
 }>()
 
 const tickerKey = computed(() => props.activities.map(a => a.id).join('-'))
+
+function isUrl(str: string): boolean {
+  if (!str) return false
+  return str.startsWith('/') || str.startsWith('http://') || str.startsWith('https://')
+}
+
+function cleanAvatar(avatar: string): string {
+  return isUrl(avatar) ? '😊' : avatar
+}
 </script>
 
 <style scoped>
@@ -67,7 +76,7 @@ const tickerKey = computed(() => props.activities.map(a => a.id).join('-'))
   display: inline-flex;
   gap: 16px;
   white-space: nowrap;
-  animation: ticker-scroll 20s linear infinite;
+  animation: ticker-scroll 45s linear infinite;
 }
 
 .ticker-item {

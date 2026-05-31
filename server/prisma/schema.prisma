@@ -35,6 +35,7 @@ model Coach {
   bonusRules       BonusRule[]
   shopItems        ShopItem[]
   customIndicators CustomIndicator[]
+  sessions         Session[]
 }
 
 model Player {
@@ -44,15 +45,17 @@ model Player {
   avatar         String @default("😊")
   age            Int?
   currentPoints  Int @default(0)
-  lifetimePoints Int @default(0)
   isActive       Boolean @default(true)
   createdAt      BigInt
   updatedAt      BigInt
 
-  coach        Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  pet          Pet?
-  scoreRecords ScoreRecord[]
-  inventory    PlayerInventory[]
+  coach         Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  pet           Pet?
+  scoreRecords  ScoreRecord[]
+  transactions  TransactionRecord[]
+  inventory     PlayerInventory[]
+  statsCache    PlayerStatsCache?
+  attendances   Attendance[]
 }
 
 model Pet {
@@ -133,6 +136,22 @@ model ScoreRecord {
   @@index([playerId, createdAt])
 }
 
+// 积分消费流水（从 ScoreRecord 拆分，仅记录消费/支出）
+model TransactionRecord {
+  id        String @id @default(uuid())
+  playerId  String
+  itemId    String? // 关联商品（如果是消费）
+  amount    Int     // 负数为支出，正数为退款
+  type      String  // buy / use / feed / play / refund
+  reason    String
+  balance   Int     // 操作后的积分余额
+  createdAt BigInt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+}
+
 model BonusRule {
   id        String @id @default(uuid())
   coachId   String
@@ -150,9 +169,13 @@ model ShopItem {
   coachId     String?
   name        String
   description String @default("")
+  emoji       String @default("📦")
   type        String
   price       Int
   effect      Json
+  usageType   String @default("consume")
+  usageCount  Int?
+  imageUrl    String?
   imageClass  String @default("")
   stock       Int @default(999)
   isActive    Boolean @default(true)
@@ -163,12 +186,14 @@ model ShopItem {
 }
 
 model PlayerInventory {
-  id         String @id @default(uuid())
-  playerId   String
-  itemId     String
-  quantity   Int @default(1)
-  isEquipped Boolean @default(false)
-  acquiredAt BigInt
+  id               String @id @default(uuid())
+  playerId         String
+  itemId           String
+  quantity         Int @default(1)
+  isEquipped       Boolean @default(false)
+  acquiredAt       BigInt
+  lastUnequippedAt BigInt?
+  expiresAt        BigInt?
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
@@ -203,10 +228,49 @@ model PetBackgroundDef {
   thumbnailColor String
 }
 
+// 训练课次
+model Session {
+  id         String @id @default(uuid())
+  coachId    String
+  name       String   // "周三训练"
+  date       BigInt   // 时间戳
+  status     String   @default("planned") // planned/active/completed
+  createdAt  BigInt
+
+  coach       Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  attendances Attendance[]
+}
+
+// 出勤记录
+model Attendance {
+  id        String @id @default(uuid())
+  sessionId String?
+  playerId  String
+  status    String // present/late/absent
+  createdAt BigInt
+
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  player  Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, playerId])
+  @@index([playerId, createdAt])
+}
+
 model CustomData {
   id         String @id @default(uuid())
   coachId    String?
   type       String
   data       Json
   importedAt BigInt
+}
+
+// 学员能力数据预计算缓存（解决雷达图实时聚合性能问题）
+model PlayerStatsCache {
+  id            String @id @default(uuid())
+  playerId      String @unique
+  overall       Int    @default(0)
+  dimensionJson Json   // {维度ID: {score, indicators: [{indicatorId, score}]}}
+  updatedAt     BigInt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 }

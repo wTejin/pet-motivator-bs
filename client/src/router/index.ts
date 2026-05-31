@@ -52,6 +52,7 @@ const router = createRouter({
         { path: 'dashboard', name: 'adminDashboard', component: () => import('@/views/admin/AdminDashboardPage.vue') },
         { path: 'coaches', name: 'adminCoaches', component: () => import('@/views/admin/AdminCoachesPage.vue') },
         { path: 'shop', name: 'adminShop', component: () => import('@/views/admin/AdminShopPage.vue') },
+        { path: 'pet-species', name: 'adminPetSpecies', component: () => import('@/views/admin/AdminPetSpeciesPage.vue') },
       ],
     },
   ],

@@ -65,6 +65,15 @@
               class="login-input"
             />
           </div>
+          <div class="mb-4">
+            <label class="login-label">学校 / 团队（选填）</label>
+            <input
+              v-model="school"
+              type="text"
+              placeholder="例如：北京大学"
+              class="login-input"
+            />
+          </div>
           <div class="mb-6">
             <label class="login-label">确认密码</label>
             <input
@@ -106,6 +115,7 @@ const mode = ref<'login' | 'register'>('login')
 const phone = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const school = ref('')
 const error = ref('')
 const loading = ref(false)
 
@@ -146,7 +156,7 @@ async function handleRegister() {
   }
   loading.value = true
   try {
-    await coachApi.register(phone.value, password.value)
+    await coachApi.register(phone.value, password.value, school.value)
     error.value = ''
     mode.value = 'login'
     alert('注册成功！请使用新密码登录')

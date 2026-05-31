@@ -1,53 +1,102 @@
 <template>
-  <div class="max-w-6xl mx-auto space-y-6">
-    <h2 class="text-xl font-bold" style="font-family: var(--font-display)">仪表盘</h2>
-
+  <div class="dashboard-page">
     <!-- Loading -->
-    <div v-if="loading" class="text-center text-white/60 py-8">
-      <div class="skeleton h-24 w-full mb-4"></div>
+    <div v-if="loading" class="loading-state">
+      <div class="skeleton-card" v-for="i in 8" :key="i">
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line"></div>
+      </div>
     </div>
 
     <template v-else>
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="glass-card p-5 text-center">
-          <div class="text-white/50 text-sm mb-1">总教练数</div>
-          <div class="text-3xl font-bold" style="font-family: var(--font-num)">{{ stats.coachCount }}</div>
+      <!-- 教练账号健康度 -->
+      <div class="section-label">👨‍🏫 教练账号健康度</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <div class="stat-label">总教练数</div>
+            <div class="stat-value">{{ stats.coachCount }}</div>
+          </div>
         </div>
-        <div class="glass-card p-5 text-center">
-          <div class="text-white/50 text-sm mb-1">活跃教练</div>
-          <div class="text-3xl font-bold text-green-400" style="font-family: var(--font-num)">{{ stats.activeCoachCount }}</div>
+        <div class="stat-card active">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-label">活跃教练</div>
+            <div class="stat-value" style="color: #43a047">{{ stats.activeCoachCount }}</div>
+          </div>
         </div>
-        <div class="glass-card p-5 text-center">
-          <div class="text-white/50 text-sm mb-1">总球员数</div>
-          <div class="text-3xl font-bold text-blue-400" style="font-family: var(--font-num)">{{ stats.playerCount }}</div>
+        <div class="stat-card warning">
+          <div class="stat-icon">⏰</div>
+          <div class="stat-info">
+            <div class="stat-label">即将过期</div>
+            <div class="stat-value" style="color: #f57c00">{{ stats.expiringCoachCount }}</div>
+          </div>
         </div>
-        <div class="glass-card p-5 text-center">
-          <div class="text-white/50 text-sm mb-1">试用中教练</div>
-          <div class="text-3xl font-bold text-yellow-400" style="font-family: var(--font-num)">{{ stats.trialCoachCount }}</div>
+        <div class="stat-card expired">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-info">
+            <div class="stat-label">已过期</div>
+            <div class="stat-value" style="color: #dc2626">{{ stats.expiredCoachCount }}</div>
+          </div>
         </div>
       </div>
 
-      <!-- Quick Links -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <router-link
-          to="/admin/coaches"
-          class="glass-card p-6 hover:bg-white/10 hover:-translate-y-1 transition-all flex items-center gap-4"
-        >
-          <span class="text-3xl">👥</span>
-          <div>
-            <div class="font-semibold text-lg">教练管理</div>
-            <div class="text-sm text-white/50">管理教练账号、授权、启用/停用</div>
+      <!-- 业务规模 -->
+      <div class="section-label">📈 业务规模</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">⚽</div>
+          <div class="stat-info">
+            <div class="stat-label">总球员数</div>
+            <div class="stat-value" style="color: #1e88e5">{{ stats.playerCount }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🆕</div>
+          <div class="stat-info">
+            <div class="stat-label">今日新增球员</div>
+            <div class="stat-value" style="color: #1e88e5">{{ stats.todayNewPlayerCount }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🐾</div>
+          <div class="stat-info">
+            <div class="stat-label">宠物总数</div>
+            <div class="stat-value" style="color: #8e24aa">{{ stats.petCount }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏪</div>
+          <div class="stat-info">
+            <div class="stat-label">全局商品数</div>
+            <div class="stat-value" style="color: #ff9800">{{ stats.shopItemCount }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷入口 -->
+      <div class="section-label">🚀 功能入口</div>
+      <div class="quick-grid">
+        <router-link to="/admin/coaches" class="quick-card">
+          <div class="quick-icon">👥</div>
+          <div class="quick-info">
+            <div class="quick-title">教练管理</div>
+            <div class="quick-desc">查看、授权、管理所有教练账号</div>
           </div>
         </router-link>
-        <router-link
-          to="/admin/shop"
-          class="glass-card p-6 hover:bg-white/10 hover:-translate-y-1 transition-all flex items-center gap-4"
-        >
-          <span class="text-3xl">🏪</span>
-          <div>
-            <div class="font-semibold text-lg">魔法集市</div>
-            <div class="text-sm text-white/50">管理食物、配饰、背景、魔法四类商品</div>
+        <router-link to="/admin/shop" class="quick-card">
+          <div class="quick-icon">🏪</div>
+          <div class="quick-info">
+            <div class="quick-title">魔法市集</div>
+            <div class="quick-desc">管理全局商品、定价与库存</div>
+          </div>
+        </router-link>
+        <router-link to="/admin/pet-species" class="quick-card">
+          <div class="quick-icon">🐾</div>
+          <div class="quick-info">
+            <div class="quick-title">宠物管理</div>
+            <div class="quick-desc">配置宠物物种、阶段与外观</div>
           </div>
         </router-link>
       </div>
@@ -64,8 +113,12 @@ const loading = ref(true)
 const stats = ref({
   coachCount: 0,
   activeCoachCount: 0,
+  expiringCoachCount: 0,
+  expiredCoachCount: 0,
   playerCount: 0,
-  trialCoachCount: 0,
+  todayNewPlayerCount: 0,
+  petCount: 0,
+  shopItemCount: 0,
 })
 
 onMounted(async () => {
@@ -74,18 +127,38 @@ onMounted(async () => {
       adminApi.getStats(),
       adminApi.getCoaches(),
     ])
-    if (statsRes.data.success) {
-      const d = statsRes.data.data
-      stats.value.coachCount = d.coachCount || 0
-      stats.value.playerCount = d.playerCount || 0
-    }
+
+    const now = Date.now()
+    const sevenDaysLater = now + 7 * 24 * 3600 * 1000
+
     if (coachesRes.data.success) {
       const coaches = coachesRes.data.data || []
-      stats.value.activeCoachCount = coaches.filter((c: any) => c.isActive).length
-      const now = Date.now()
-      stats.value.trialCoachCount = coaches.filter(
-        (c: any) => c.trialUntil && Number(c.trialUntil) > now && Number(c.authorizedUntil) <= Number(c.trialUntil)
+
+      // 教练账号健康度（全部从 coaches 数据计算，保证一致性）
+      stats.value.coachCount = coaches.length
+      stats.value.activeCoachCount = coaches.filter(
+        (c: any) => c.isActive && Number(c.authorizedUntil) > now
       ).length
+      stats.value.expiringCoachCount = coaches.filter(
+        (c: any) =>
+          c.isActive &&
+          Number(c.authorizedUntil) > now &&
+          Number(c.authorizedUntil) <= sevenDaysLater
+      ).length
+      stats.value.expiredCoachCount = coaches.filter(
+        (c: any) =>
+          c.isActive &&
+          Number(c.authorizedUntil) > 0 &&
+          Number(c.authorizedUntil) <= now
+      ).length
+    }
+
+    if (statsRes.data.success) {
+      const d = statsRes.data.data
+      stats.value.playerCount = d.playerCount || 0
+      stats.value.todayNewPlayerCount = d.todayNewPlayerCount || 0
+      stats.value.petCount = d.petCount || 0
+      stats.value.shopItemCount = d.shopItemCount || 0
     }
   } catch (e) {
     console.error('Failed to load stats', e)
@@ -94,3 +167,159 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.dashboard-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section-label + .stats-grid {
+  margin-bottom: 28px;
+}
+
+/* Loading */
+.loading-state {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.skeleton-card {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 6px;
+}
+
+.skeleton-line.short {
+  width: 50%;
+  height: 12px;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card.active {
+  border-left: 3px solid #43a047;
+}
+
+.stat-card.warning {
+  border-left: 3px solid #ff9800;
+}
+
+.stat-card.expired {
+  border-left: 3px solid #dc2626;
+}
+
+.stat-icon {
+  font-size: 28px;
+  line-height: 1;
+  width: 40px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  font-family: 'Russo One', 'PingFang SC', sans-serif;
+}
+
+/* Quick Entry Cards */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.quick-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: white;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.quick-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.quick-icon {
+  font-size: 32px;
+  line-height: 1;
+  width: 48px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.quick-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.quick-desc {
+  font-size: 12px;
+  color: #888;
+}
+</style>

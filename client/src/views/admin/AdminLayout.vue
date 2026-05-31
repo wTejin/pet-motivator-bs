@@ -1,41 +1,24 @@
 <template>
-  <div class="min-h-screen bg-[#0a1628] text-white">
+  <div class="admin-layout">
     <!-- Top Nav Bar -->
-    <nav class="glass-card border-b border-white/10 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-      <div class="flex items-center gap-3">
-        <router-link to="/admin/dashboard" class="text-white/60 hover:text-white transition-colors">
+    <nav class="admin-navbar">
+      <div class="nav-brand">
+        <router-link to="/admin/dashboard" class="nav-back">
           &#8592;
         </router-link>
-        <span class="text-xl" style="font-family: var(--font-display)">🛡️</span>
-        <h1 class="text-lg font-bold" style="font-family: var(--font-display)">管理后台</h1>
+        <span class="nav-icon">🛡️</span>
+        <h1 class="nav-title">管理后台</h1>
       </div>
-      <div class="flex items-center gap-4">
-        <span class="text-sm text-white/60 hidden sm:inline">{{ auth.user?.username }}</span>
-        <button
-          class="text-sm text-white/60 hover:text-red-400 transition-colors"
-          @click="auth.logout()"
-        >
+      <div class="nav-user">
+        <span class="user-name">{{ auth.user?.username }}</span>
+        <button class="logout-btn" @click="auth.logout()">
           退出
         </button>
       </div>
     </nav>
 
-    <!-- Admin Quick Nav -->
-    <div class="admin-nav">
-      <router-link
-        v-for="link in navLinks"
-        :key="link.to"
-        :to="link.to"
-        class="nav-link"
-        :class="{ active: $route.path === link.to || $route.path.startsWith(link.to + '/') }"
-      >
-        <span class="nav-icon">{{ link.icon }}</span>
-        <span class="nav-label">{{ link.label }}</span>
-      </router-link>
-    </div>
-
     <!-- Child page renders here -->
-    <div class="p-4 md:p-6">
+    <div class="admin-content">
       <router-view />
     </div>
   </div>
@@ -46,48 +29,92 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
-const navLinks = [
-  { to: '/admin/dashboard', icon: '📊', label: '仪表盘' },
-  { to: '/admin/coaches', icon: '👥', label: '教练管理' },
-  { to: '/admin/shop', icon: '🏪', label: '魔法集市' },
-]
 </script>
 
 <style scoped>
-.admin-nav {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px 0;
-  overflow-x: auto;
+.admin-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+  color: #333;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-.nav-link {
+/* Top Nav Bar */
+.admin-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
-  font-weight: 500;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-back {
+  color: #999;
   text-decoration: none;
-  white-space: nowrap;
-  transition: all 0.2s;
+  font-size: 18px;
+  transition: color 0.2s;
+  padding: 4px 8px;
+  border-radius: 8px;
 }
 
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.nav-link.active {
-  background: linear-gradient(135deg, #42a5f5, #1e88e5);
-  color: white;
-  border-color: transparent;
+.nav-back:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .nav-icon {
-  font-size: 16px;
+  font-size: 22px;
+}
+
+.nav-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-name {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.logout-btn {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Content Area */
+.admin-content {
+  padding: 16px 20px 40px;
 }
 </style>

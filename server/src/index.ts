@@ -16,9 +16,10 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 
-// Static files for uploaded avatars and team logos
+// Static files for uploaded avatars, team logos and pet images
 app.use('/avatars', express.static(path.join(__dirname, '../public/avatars')))
 app.use('/logos', express.static(path.join(__dirname, '../../client/public/logos')))
+app.use('/images', express.static(path.join(__dirname, '../public/images')))
 
 app.use('/api', publicRouter)
 app.use('/api/admin', adminRouter)

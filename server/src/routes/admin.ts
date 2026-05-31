@@ -1,11 +1,37 @@
 import { Router, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
+import multer from 'multer'
+import path from 'path'
 import { hashPassword, verifyPassword, signToken } from '../services/auth'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { config, getDefaultPassword } from '../config'
+import fs from 'fs'
 
 const db = new PrismaClient()
 export const adminRouter = Router()
+
+const imageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(__dirname, '../../public/images/pets')
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    cb(null, dir)
+  },
+  filename: (_req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9)
+    const ext = path.extname(file.originalname) || '.png'
+    cb(null, `pet-${unique}${ext}`)
+  },
+})
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+    if (allowed.includes(file.mimetype)) cb(null, true)
+    else cb(new Error('仅支持 jpg/png/gif/webp/svg 格式'))
+  },
+})
 
 adminRouter.post('/login', async (req: AuthRequest, res: Response) => {
   const { username, password } = req.body
@@ -104,20 +130,114 @@ adminRouter.put('/coaches/:id', authenticate, requireRole('admin'), async (req: 
   res.json({ success: true, data: { ...coach, authorizedUntil: Number(coach.authorizedUntil) } })
 })
 
+adminRouter.put('/coaches/:id/reset-password', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const coach = await db.coach.findUnique({ where: { id } })
+  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
+
+  const newPassword = getDefaultPassword(coach.phone)
+  await db.coach.update({
+    where: { id },
+    data: { passwordHash: await hashPassword(newPassword), updatedAt: Date.now() },
+  })
+
+  res.json({ success: true, message: '密码已重置', data: { newPassword } })
+})
+
 adminRouter.get('/stats', authenticate, requireRole('admin'), async (_req: AuthRequest, res: Response) => {
-  const [coachCount, playerCount, petCount] = await Promise.all([
-    db.coach.count(), db.player.count(), db.pet.count(),
+  const now = Date.now()
+  const todayStart = new Date().setHours(0, 0, 0, 0)
+
+  const [playerCount, petCount, shopItemCount, todayNewPlayerCount] = await Promise.all([
+    db.player.count(),
+    db.pet.count(),
+    db.shopItem.count({ where: { coachId: null } }),
+    db.player.count({ where: { createdAt: { gte: BigInt(todayStart) } } }),
   ])
-  res.json({ success: true, data: { coachCount, playerCount, petCount } })
+
+  res.json({
+    success: true,
+    data: {
+      playerCount,
+      petCount,
+      shopItemCount,
+      todayNewPlayerCount,
+      serverTime: now,
+    },
+  })
+})
+
+adminRouter.get('/pet-species', authenticate, requireRole('admin'), async (_req: AuthRequest, res: Response) => {
+  const species = await db.petSpeciesDef.findMany({ orderBy: { name: 'asc' } })
+  res.json({
+    success: true,
+    data: species.map(s => ({
+      ...s,
+      stages: JSON.parse(JSON.stringify(s.stages)),
+    })),
+  })
 })
 
 adminRouter.post('/pet-species', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
   const { species } = req.body
-  if (!Array.isArray(species)) return res.status(400).json({ success: false, error: 'species 必须是数组' })
-  for (const s of species) {
-    await db.petSpeciesDef.upsert({ where: { id: s.id }, create: s, update: s })
+  if (species && Array.isArray(species)) {
+    for (const s of species) {
+      await db.petSpeciesDef.upsert({ where: { id: s.id }, create: s, update: s })
+    }
+    return res.json({ success: true, data: { count: species.length } })
   }
-  res.json({ success: true, data: { count: species.length } })
+
+  const { id, name, category, emoji, backgroundColor, accentColor, stages } = req.body
+  if (!id || !name || !category) {
+    return res.status(400).json({ success: false, error: 'id、name、category 必填' })
+  }
+  const defaultStages = {
+    egg: { emoji: '🥚', imageUrl: '', label: '蛋' },
+    level1: { emoji: emoji || '🐣', imageUrl: '', label: '幼崽' },
+    level2: { emoji: emoji || '🐥', imageUrl: '', label: '少年' },
+    level3: { emoji: emoji || '🐤', imageUrl: '', label: '成年' },
+    rare: { emoji: emoji || '✨', imageUrl: '', label: '稀有' },
+  }
+  const item = await db.petSpeciesDef.create({
+    data: {
+      id,
+      name,
+      category,
+      description: req.body.description || '',
+      emoji: emoji || '🥚',
+      backgroundColor: backgroundColor || '#e3f2fd',
+      accentColor: accentColor || '#42a5f5',
+      stages: stages || defaultStages,
+    },
+  })
+  res.json({ success: true, data: { ...item, stages: JSON.parse(JSON.stringify(item.stages)) } })
+})
+
+adminRouter.put('/pet-species/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const existing = await db.petSpeciesDef.findUnique({ where: { id } })
+  if (!existing) return res.status(404).json({ success: false, error: '物种不存在' })
+
+  const { name, category, description, emoji, backgroundColor, accentColor, stages } = req.body
+  const updateData: any = {}
+  if (name !== undefined) updateData.name = name
+  if (category !== undefined) updateData.category = category
+  if (description !== undefined) updateData.description = description
+  if (emoji !== undefined) updateData.emoji = emoji
+  if (backgroundColor !== undefined) updateData.backgroundColor = backgroundColor
+  if (accentColor !== undefined) updateData.accentColor = accentColor
+  if (stages !== undefined) updateData.stages = stages
+
+  const updated = await db.petSpeciesDef.update({ where: { id }, data: updateData })
+  res.json({ success: true, data: { ...updated, stages: JSON.parse(JSON.stringify(updated.stages)) } })
+})
+
+adminRouter.delete('/pet-species/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const existing = await db.petSpeciesDef.findUnique({ where: { id } })
+  if (!existing) return res.status(404).json({ success: false, error: '物种不存在' })
+  await db.petSpeciesDef.delete({ where: { id } })
+  res.json({ success: true, message: '已删除' })
 })
 
 adminRouter.post('/accessories', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
@@ -138,6 +258,13 @@ adminRouter.post('/backgrounds', authenticate, requireRole('admin'), async (req:
   res.json({ success: true, data: { count: backgrounds.length } })
 })
 
+function inferUsageType(type: string): string {
+  if (type === 'accessory') return 'rent'
+  if (type === 'background') return 'rent'
+  if (type === 'toy') return 'charge'
+  return 'consume'
+}
+
 // ---------- 魔法集市 ----------
 
 adminRouter.get('/shop-items', authenticate, requireRole('admin'), async (_req: AuthRequest, res: Response) => {
@@ -149,19 +276,24 @@ adminRouter.get('/shop-items', authenticate, requireRole('admin'), async (_req: 
 })
 
 adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
-  const { name, description, type, price, stock, effect, imageClass, sortOrder } = req.body
+  const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder } = req.body
   if (!name || !type || price == null) {
     return res.status(400).json({ success: false, error: '名称、类型、价格必填' })
   }
   const now = Date.now()
+  const inferredUsageType = usageType || inferUsageType(type)
   const item = await db.shopItem.create({
     data: {
       name,
       description: description || '',
+      emoji: emoji || '📦',
       type,
       price: Number(price),
       stock: stock != null ? Number(stock) : 999,
       effect: effect || {},
+      usageType: inferredUsageType,
+      usageCount: usageCount != null ? Number(usageCount) : null,
+      imageUrl: imageUrl || null,
       imageClass: imageClass || '',
       sortOrder: sortOrder != null ? Number(sortOrder) : 0,
       createdAt: now,
@@ -172,17 +304,22 @@ adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: 
 
 adminRouter.put('/shop-items/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
   const id = req.params.id as string
-  const { name, description, type, price, stock, effect, imageClass, sortOrder, isActive } = req.body
+  const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder, isActive } = req.body
   const existing = await db.shopItem.findUnique({ where: { id } })
   if (!existing) return res.status(404).json({ success: false, error: '商品不存在' })
 
   const updateData: any = {}
   if (name !== undefined) updateData.name = name
   if (description !== undefined) updateData.description = description
+  if (emoji !== undefined) updateData.emoji = emoji
   if (type !== undefined) updateData.type = type
   if (price !== undefined) updateData.price = Number(price)
   if (stock !== undefined) updateData.stock = Number(stock)
   if (effect !== undefined) updateData.effect = effect
+  if (type !== undefined && usageType === undefined) updateData.usageType = inferUsageType(type)
+  if (usageType !== undefined) updateData.usageType = usageType
+  if (usageCount !== undefined) updateData.usageCount = usageCount != null ? Number(usageCount) : null
+  if (imageUrl !== undefined) updateData.imageUrl = imageUrl
   if (imageClass !== undefined) updateData.imageClass = imageClass
   if (sortOrder !== undefined) updateData.sortOrder = Number(sortOrder)
   if (isActive !== undefined) updateData.isActive = isActive
@@ -197,4 +334,12 @@ adminRouter.delete('/shop-items/:id', authenticate, requireRole('admin'), async 
   if (!existing) return res.status(404).json({ success: false, error: '商品不存在' })
   await db.shopItem.delete({ where: { id } })
   res.json({ success: true, message: '已删除' })
+})
+
+// ---------- 图片上传 ----------
+
+adminRouter.post('/upload-image', authenticate, requireRole('admin'), imageUpload.single('image'), (req: AuthRequest, res: Response) => {
+  if (!req.file) return res.status(400).json({ success: false, error: '未收到文件' })
+  const url = `/images/pets/${req.file.filename}`
+  res.json({ success: true, data: { url } })
 })

@@ -80,7 +80,7 @@
         </router-link>
         <router-link to="/coach/shop" class="action-item">
           <span class="action-icon">🛒</span>
-          <span class="action-label">管理商店</span>
+          <span class="action-label">管理魔法市集</span>
         </router-link>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import multer from 'multer'
 import path from 'path'
 import { hashPassword, verifyPassword, signToken } from '../services/auth'
+import { refreshPlayerStatsCache } from '../services/stats'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { config, getDefaultPassword } from '../config'
 
@@ -35,7 +36,7 @@ function coachId(req: AuthRequest): string { return req.userId! }
 // ---------- 注册 & 登录 ----------
 
 coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
-  const { phone, password } = req.body
+  const { phone, password, school } = req.body
   if (!phone || !/^\d{11}$/.test(phone)) {
     return res.status(400).json({ success: false, error: '请输入有效的11位手机号' })
   }
@@ -48,7 +49,10 @@ coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
   const coach = await db.coach.create({
     data: {
       phone, passwordHash,
-      name: phone, trialUntil, authorizedUntil: trialUntil,
+      name: phone,
+      school: school || '',
+      teamName: school ? `${school}球队` : '',
+      trialUntil, authorizedUntil: trialUntil,
       createdAt: now, updatedAt: now,
     },
   })
@@ -230,7 +234,7 @@ coachRouter.get('/players', authenticate, requireRole('coach'), async (req: Auth
   })
   const data = players.map(p => ({
     id: p.id, name: p.name, avatar: p.avatar,
-    currentPoints: p.currentPoints, lifetimePoints: p.lifetimePoints,
+    currentPoints: p.currentPoints,
     isActive: p.isActive, pet: p.pet || null, createdAt: Number(p.createdAt),
   }))
   res.json({ success: true, data })
@@ -269,7 +273,10 @@ coachRouter.delete('/players/:id', authenticate, requireRole('coach'), async (re
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
   await db.pet.deleteMany({ where: { playerId: id } })
   await db.scoreRecord.deleteMany({ where: { playerId: id } })
+  await db.transactionRecord.deleteMany({ where: { playerId: id } })
   await db.playerInventory.deleteMany({ where: { playerId: id } })
+  await db.playerStatsCache.deleteMany({ where: { playerId: id } })
+  await db.attendance.deleteMany({ where: { playerId: id } })
   await db.player.delete({ where: { id } })
   res.json({ success: true, message: '删除成功' })
 })
@@ -292,30 +299,39 @@ coachRouter.post('/scores', authenticate, requireRole('coach'), async (req: Auth
         _sum: { points: true },
       })
       const todayPoints = todayCount._sum.points || 0
-      if (todayPoints + points > limitSource.dailyLimit) {
+      if (points > 0 && todayPoints + points > limitSource.dailyLimit) {
         return res.status(400).json({ success: false, error: `今日该指标已达上限 (${todayPoints}/${limitSource.dailyLimit})` })
       }
     }
   }
 
   const now = Date.now()
-  const record = await db.scoreRecord.create({
-    data: {
-      coachId: coachId(req), playerId, ruleId: null, indicatorId: indicatorId || null,
-      sessionId: sessionId || null, points, type, reason,
-      operatorType: 'coach', operatorId: coachId(req), createdAt: now,
-    },
-  })
+  try {
+    const record = await db.$transaction(async (tx) => {
+      const created = await tx.scoreRecord.create({
+        data: {
+          coachId: coachId(req), playerId, ruleId: null, indicatorId: indicatorId || null,
+          sessionId: sessionId || null, points, type, reason,
+          operatorType: 'coach', operatorId: coachId(req), createdAt: now,
+        },
+      })
+      await tx.player.update({
+        where: { id: playerId },
+        data: {
+          currentPoints: { increment: points },
+          updatedAt: now,
+        },
+      })
+      return created
+    })
 
-  await db.player.update({
-    where: { id: playerId },
-    data: {
-      currentPoints: { increment: points },
-      lifetimePoints: points > 0 ? { increment: points } : undefined,
-      updatedAt: now,
-    },
-  })
-  res.json({ success: true, data: record })
+    // 异步刷新学员能力数据缓存（不阻塞响应）
+    refreshPlayerStatsCache(playerId, coachId(req)).catch(() => {})
+
+    res.json({ success: true, data: record })
+  } catch (e) {
+    return res.status(500).json({ success: false, error: '操作失败，请重试' })
+  }
 })
 
 coachRouter.get('/scores/:playerId', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
@@ -336,11 +352,11 @@ coachRouter.get('/dashboard-stats', authenticate, requireRole('coach'), async (r
   const [players, todayAgg, totalAgg, recentRecords] = await Promise.all([
     db.player.findMany({ where: { coachId: cid }, include: { pet: true } }),
     db.scoreRecord.aggregate({
-      where: { coachId: cid, createdAt: { gte: todayStart.getTime() } },
+      where: { coachId: cid, type: { in: ['earn', 'penalty'] }, createdAt: { gte: todayStart.getTime() } },
       _sum: { points: true }, _count: { points: true },
     }),
     db.scoreRecord.aggregate({
-      where: { coachId: cid },
+      where: { coachId: cid, type: { in: ['earn', 'penalty'] } },
       _sum: { points: true }, _count: { points: true },
     }),
     db.scoreRecord.findMany({
@@ -391,33 +407,50 @@ coachRouter.get('/player-stats/:playerId', authenticate, requireRole('coach'), a
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0, 0, 0, 0)
   const [todayScores, weekScores] = await Promise.all([
-    db.scoreRecord.aggregate({ where: { playerId, createdAt: { gte: todayStart.getTime() } }, _sum: { points: true } }),
-    db.scoreRecord.aggregate({ where: { playerId, createdAt: { gte: weekStart.getTime() } }, _sum: { points: true } }),
+    db.scoreRecord.aggregate({ where: { playerId, type: { in: ['earn', 'penalty'] }, createdAt: { gte: todayStart.getTime() } }, _sum: { points: true } }),
+    db.scoreRecord.aggregate({ where: { playerId, type: { in: ['earn', 'penalty'] }, createdAt: { gte: weekStart.getTime() } }, _sum: { points: true } }),
   ])
 
-  const indicatorScores = await db.scoreRecord.groupBy({
-    by: ['indicatorId'],
-    where: { playerId, indicatorId: { not: null } },
-    _sum: { points: true },
-  })
-  const scoreMap = new Map(indicatorScores.map(s => [s.indicatorId, s._sum.points || 0]))
+  // 优先读取预计算缓存
+  let dimStats: any[] = []
+  let overall = 0
 
-  const dimStats = dimensions.map((dim) => {
-    const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
-    const dimTotal = dim.indicators.reduce((sum, ind) => sum + (scoreMap.get(ind.id) || 0), 0)
-    const indicators = dim.indicators.map(ind => ({
-      indicatorId: ind.id,
-      indicatorName: ind.name,
-      score: scoreMap.get(ind.id) || 0,
-    }))
-    return {
-      dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
-      score: Math.min(99, Math.round((dimTotal / Math.max(1, maxScore)) * 99)), maxScore,
-      indicators,
-    }
-  })
+  const cache = await db.playerStatsCache.findUnique({ where: { playerId } })
+  if (cache && Number(cache.updatedAt) > Date.now() - 24 * 3600 * 1000) {
+    dimStats = Array.isArray(cache.dimensionJson) ? cache.dimensionJson : []
+    overall = cache.overall
+  } else {
+    const indicatorScores = await db.scoreRecord.groupBy({
+      by: ['indicatorId'],
+      where: { playerId, indicatorId: { not: null }, type: { in: ['earn', 'penalty'] } },
+      _sum: { points: true },
+    })
+    const scoreMap = new Map(indicatorScores.map(s => [s.indicatorId, s._sum.points || 0]))
 
-  const overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
+    dimStats = dimensions.map((dim) => {
+      const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
+      const dimTotal = dim.indicators.reduce((sum, ind) => sum + (scoreMap.get(ind.id) || 0), 0)
+      const indicators = dim.indicators.map(ind => ({
+        indicatorId: ind.id,
+        indicatorName: ind.name,
+        score: scoreMap.get(ind.id) || 0,
+      }))
+      return {
+        dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
+        score: Math.min(99, Math.round((dimTotal / Math.max(1, maxScore)) * 99)), maxScore,
+        indicators,
+      }
+    })
+
+    overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
+
+    // 写入缓存
+    await db.playerStatsCache.upsert({
+      where: { playerId },
+      create: { playerId, overall, dimensionJson: dimStats as any, updatedAt: Date.now() },
+      update: { overall, dimensionJson: dimStats as any, updatedAt: Date.now() },
+    })
+  }
   const allPlayers = await db.player.findMany({
     where: { coachId: coachId(req) }, select: { id: true, currentPoints: true },
     orderBy: { currentPoints: 'desc' },
@@ -428,7 +461,7 @@ coachRouter.get('/player-stats/:playerId', authenticate, requireRole('coach'), a
     success: true,
     data: {
       playerId, playerName: player.name, avatar: player.avatar, age: player.age ?? null, overall, dimensions: dimStats,
-      totalPoints: player.currentPoints, lifetimePoints: player.lifetimePoints,
+      totalPoints: player.currentPoints,
       todayPoints: todayScores._sum?.points || 0, weeklyPoints: weekScores._sum?.points || 0, rank,
     },
   })
@@ -609,6 +642,74 @@ coachRouter.post('/import', authenticate, requireRole('coach'), async (req: Auth
   if (!type || !data) return res.status(400).json({ success: false, error: 'type 和 data 必填' })
   await db.customData.create({ data: { coachId: coachId(req), type, data, importedAt: Date.now() } })
   res.json({ success: true, message: '导入成功' })
+})
+
+// ---------- 训练课次 ----------
+
+coachRouter.get('/sessions', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const sessions = await db.session.findMany({
+    where: { coachId: coachId(req) },
+    orderBy: { date: 'desc' },
+    include: { attendances: { include: { player: { select: { id: true, name: true, avatar: true } } } } },
+  })
+  res.json({ success: true, data: sessions.map(s => ({ ...s, date: Number(s.date), createdAt: Number(s.createdAt) })) })
+})
+
+coachRouter.post('/sessions', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const { name, date } = req.body
+  if (!name || !date) return res.status(400).json({ success: false, error: '名称和日期必填' })
+  const session = await db.session.create({
+    data: { coachId: coachId(req), name, date: Number(date), createdAt: Date.now() },
+  })
+  res.json({ success: true, data: { ...session, date: Number(session.date) } })
+})
+
+coachRouter.put('/sessions/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const { name, date, status } = req.body
+  const existing = await db.session.findFirst({ where: { id, coachId: coachId(req) } })
+  if (!existing) return res.status(404).json({ success: false, error: '课次不存在' })
+  const updated = await db.session.update({
+    where: { id },
+    data: {
+      ...(name && { name }),
+      ...(date && { date: Number(date) }),
+      ...(status && { status }),
+    },
+  })
+  res.json({ success: true, data: { ...updated, date: Number(updated.date) } })
+})
+
+coachRouter.delete('/sessions/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const existing = await db.session.findFirst({ where: { id, coachId: coachId(req) } })
+  if (!existing) return res.status(404).json({ success: false, error: '课次不存在' })
+  await db.attendance.deleteMany({ where: { sessionId: id } })
+  await db.session.delete({ where: { id } })
+  res.json({ success: true, message: '删除成功' })
+})
+
+// ---------- 出勤记录 ----------
+
+coachRouter.post('/attendance', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const { sessionId, records } = req.body
+  if (!sessionId || !Array.isArray(records)) {
+    return res.status(400).json({ success: false, error: 'sessionId 和 records 必填' })
+  }
+  const session = await db.session.findFirst({ where: { id: sessionId, coachId: coachId(req) } })
+  if (!session) return res.status(404).json({ success: false, error: '课次不存在' })
+
+  const now = Date.now()
+  await db.attendance.deleteMany({ where: { sessionId } })
+  await db.attendance.createMany({
+    data: records.map((r: any) => ({
+      sessionId,
+      playerId: r.playerId,
+      status: r.status || 'present',
+      createdAt: now,
+    })),
+  })
+  res.json({ success: true, message: '出勤记录已保存' })
 })
 
 // ---------- 头像上传 ----------

@@ -2,8 +2,8 @@
   <div class="shop-hint-page">
     <div class="hint-card">
       <div class="hint-icon">🏪</div>
-      <h2 class="hint-title">魔法集市</h2>
-      <p class="hint-desc">魔法集市已由后台统一管理</p>
+      <h2 class="hint-title">魔法市集</h2>
+      <p class="hint-desc">魔法市集已由后台统一管理</p>
       <p class="hint-sub">如需添加、编辑或上下架商品，请联系管理员在后台操作。</p>
       <router-link to="/coach/score" class="hint-link">返回快速记分</router-link>
     </div>
