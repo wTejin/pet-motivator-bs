@@ -21,10 +21,11 @@
         >
           <div class="frame-inner">
             <img
-              v-if="isImageAvatar(stats.avatar)"
+              v-if="isImageAvatar(stats.avatar) && !avatarFailed"
               :src="stats.avatar"
               class="player-avatar-img"
               alt="avatar"
+              @error="avatarFailed = true"
             />
             <div v-else class="player-avatar">{{ stats.avatar }}</div>
           </div>
@@ -101,6 +102,7 @@ const emit = defineEmits<{
 }>()
 
 const showPicker = ref(false)
+const avatarFailed = ref(false)
 
 function onAvatarChange(avatar: string) {
   emit('update:avatar', avatar)

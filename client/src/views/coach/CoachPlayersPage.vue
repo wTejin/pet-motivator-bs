@@ -53,10 +53,11 @@
       >
         <div class="card-main">
           <img
-            v-if="isImageAvatar(player.avatar)"
+            v-if="isImageAvatar(player.avatar) && !brokenImages.has(player.avatar)"
             :src="player.avatar"
             class="card-avatar-img"
             alt="avatar"
+            @error="onImgError(player.avatar)"
           />
           <span v-else class="card-avatar">{{ player.avatar }}</span>
           <div class="card-info">
@@ -189,6 +190,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { brokenImages, onImgError } from '@/composables/useBrokenImages'
 import { coachApi } from '@/api'
 
 interface PlayerItem {

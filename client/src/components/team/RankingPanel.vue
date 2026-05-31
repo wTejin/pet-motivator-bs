@@ -10,10 +10,11 @@
       >
         <span class="rank-medal">{{ medal(item.rank) }}</span>
         <img
-          v-if="isImageAvatar(item.playerAvatar)"
+          v-if="isImageAvatar(item.playerAvatar) && !brokenImages.has(item.playerAvatar)"
           :src="item.playerAvatar"
           class="rank-avatar-img"
           alt="avatar"
+          @error="onImgError(item.playerAvatar)"
         />
         <span v-else class="rank-avatar">{{ item.playerAvatar }}</span>
         <div class="rank-info">
@@ -26,6 +27,8 @@
 </template>
 
 <script setup lang="ts">
+import { brokenImages, onImgError } from '@/composables/useBrokenImages'
+
 interface RankingItem {
   playerId: string
   playerName: string

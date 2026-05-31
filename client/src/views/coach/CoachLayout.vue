@@ -9,10 +9,11 @@
       <!-- Team Name / Logo -->
       <div class="nav-team" @click="openTeamEdit">
         <img
-          v-if="isImageAvatar(teamLogo)"
+          v-if="isImageAvatar(teamLogo) && !brokenImages.has(teamLogo)"
           :src="teamLogo"
           class="nav-team-logo-img"
           alt="team logo"
+          @error="onImgError(teamLogo)"
         />
         <span v-else class="nav-team-logo">{{ teamLogo || '⚽' }}</span>
         <span class="nav-team-name">{{ teamName || '我的球队' }}</span>
@@ -82,8 +83,8 @@
               @drop.prevent="handleDrop"
               @click="fileInput?.click()"
             >
-              <template v-if="editForm.teamLogo && isImageAvatar(editForm.teamLogo)">
-                <img :src="editForm.teamLogo" class="logo-preview" alt="preview" />
+              <template v-if="editForm.teamLogo && isImageAvatar(editForm.teamLogo) && !brokenImages.has(editForm.teamLogo)">
+                <img :src="editForm.teamLogo" class="logo-preview" alt="preview" @error="onImgError(editForm.teamLogo)" />
                 <span class="logo-hint">点击或拖拽更换队徽</span>
               </template>
               <template v-else>
@@ -112,6 +113,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { brokenImages, onImgError } from '@/composables/useBrokenImages'
 import { useAuthStore } from '@/stores/auth'
 import { coachApi } from '@/api'
 import '@/styles/coach-theme.css'

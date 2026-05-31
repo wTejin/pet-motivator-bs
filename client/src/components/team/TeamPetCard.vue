@@ -37,10 +37,11 @@
       <div class="pet-name-row">
         <div class="pet-name">{{ playerName }}</div>
         <img
-          v-if="isImageAvatar(avatar)"
+          v-if="isImageAvatar(avatar) && !brokenImages.has(avatar)"
           :src="avatar"
           class="pet-avatar-img"
           alt="avatar"
+          @error="onImgError(avatar)"
         />
         <span v-else class="pet-avatar">{{ avatar || '😊' }}</span>
       </div>
@@ -65,6 +66,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { brokenImages, onImgError } from '@/composables/useBrokenImages'
 
 interface AccessoryItem {
   id: string
