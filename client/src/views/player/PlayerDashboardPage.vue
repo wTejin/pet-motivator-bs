@@ -104,6 +104,9 @@
             :stats="playerStats"
             theme="light"
             class="fifa-desktop"
+            :editable="!isDisplayMode"
+            :upload-fn="handleAvatarUpload"
+            @update:avatar="handleAvatarChange"
           />
           <div v-else class="card-placeholder fifa-desktop">
             <p>暂无能力数据</p>
@@ -213,6 +216,9 @@
             :stats="playerStats"
             theme="light"
             class="fifa-mobile"
+            :editable="!isDisplayMode"
+            :upload-fn="handleAvatarUpload"
+            @update:avatar="handleAvatarChange"
           />
           <div v-else class="card-placeholder fifa-mobile" style="margin-top:12px">
             <p>暂无能力数据</p>
@@ -302,6 +308,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
+import api from '@/api'
 import FifaPlayerCard from '@/components/FifaPlayerCard.vue'
 import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
 import type { PlayerStats } from '@shared/types'
@@ -652,6 +659,28 @@ async function handleUseItem(inv: InventoryItem) {
     }
   } catch (e: any) {
     actionError.value = e.response?.data?.error || '使用失败'
+  }
+}
+
+// 头像上传回调（传给 AvatarPicker）
+async function handleAvatarUpload(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  const res = await api.post(`/public/player/${playerId}/avatar`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data.data.url
+}
+
+// 头像变更回调（emoji / logo / photo URL）
+async function handleAvatarChange(avatar: string) {
+  try {
+    await api.put(`/public/player/${playerId}/avatar`, { avatar })
+    if (playerStats.value) {
+      playerStats.value.avatar = avatar
+    }
+  } catch (e) {
+    console.error('头像更新失败', e)
   }
 }
 

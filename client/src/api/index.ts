@@ -291,4 +291,12 @@ export const publicApi = {
   checkin(playerId: string) {
     return api.post(`/public/player/${playerId}/checkin`)
   },
+  uploadAvatar(playerId: string, data: FormData) {
+    return api.post(`/public/player/${playerId}/avatar`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  updateAvatar(playerId: string, avatar: string) {
+    return api.put(`/public/player/${playerId}/avatar`, { avatar })
+  },
 }

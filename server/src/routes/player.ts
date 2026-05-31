@@ -1,11 +1,30 @@
 import { Router, Response, Request } from 'express'
 import { PrismaClient } from '@prisma/client'
+import multer from 'multer'
+import path from 'path'
 import { AuthRequest } from '../middleware/auth'
 import { refreshPlayerStatsCache } from '../services/stats'
 
 const db = new PrismaClient()
 export const playerRouter = Router()
 export const publicRouter = Router()
+
+// ── 头像上传配置 ──
+const avatarStorage = multer.diskStorage({
+  destination: path.join(__dirname, '../../public/avatars'),
+  filename(_req, file, cb) {
+    const ext = path.extname(file.originalname) || '.png'
+    cb(null, `avatar-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`)
+  },
+})
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter(_req, file, cb) {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    cb(null, allowed.includes(file.mimetype))
+  },
+})
 
 // ===== 公开端点 =====
 publicRouter.get('/public/players/:phone', async (req, res) => {
@@ -964,6 +983,28 @@ async function handleUse(req: Request, res: Response) {
   })
 }
 playerRouter.post('/:playerId/shop/use', handleUse)
+
+// ===== 头像 =====
+
+// 玩家上传头像文件
+publicRouter.post('/player/:playerId/avatar', avatarUpload.single('avatar'), async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ success: false, error: '未收到文件' })
+  const url = `/avatars/${req.file.filename}`
+  res.json({ success: true, data: { url } })
+})
+
+// 玩家更新头像（emoji 或 URL）
+publicRouter.put('/player/:playerId/avatar', async (req: Request, res: Response) => {
+  const playerId = req.params.playerId as string
+  const { avatar } = req.body
+  if (!avatar || typeof avatar !== 'string') return res.status(400).json({ success: false, error: '缺少头像值' })
+
+  const player = await db.player.findUnique({ where: { id: playerId } })
+  if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
+
+  await db.player.update({ where: { id: playerId }, data: { avatar, updatedAt: Date.now() } })
+  res.json({ success: true, data: { avatar } })
+})
 
 // ===== 排行榜 =====
 async function handleLeaderboard(req: Request, res: Response) {
