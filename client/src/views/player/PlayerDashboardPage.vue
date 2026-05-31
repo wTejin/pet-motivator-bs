@@ -98,6 +98,16 @@
             </div>
           </div>
 
+          <!-- PC/平板：FIFA 球员卡置于左侧宠物卡下方 -->
+          <FifaPlayerCard
+            v-if="playerStats"
+            :stats="playerStats"
+            theme="light"
+            class="fifa-desktop"
+          />
+          <div v-else class="card-placeholder fifa-desktop">
+            <p>暂无能力数据</p>
+          </div>
         </section>
 
         <!-- Right: Actions + Magic Market -->
@@ -197,12 +207,14 @@
             👀 返回全班大屏 <span class="link-arrow">&gt;</span>
           </router-link>
 
+          <!-- 手机端：FIFA 球员卡置于页面最底部 -->
           <FifaPlayerCard
             v-if="playerStats"
             :stats="playerStats"
             theme="light"
+            class="fifa-mobile"
           />
-          <div v-else class="card-placeholder" style="margin-top:12px">
+          <div v-else class="card-placeholder fifa-mobile" style="margin-top:12px">
             <p>暂无能力数据</p>
           </div>
         </section>
@@ -960,6 +972,11 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+/* FIFA 卡响应式：PC/平板显示左侧版本，手机端显示右侧底部版本 */
+.fifa-mobile {
+  display: none;
+}
+
 /* ===== Pet Panel (Left Top) ===== */
 .pet-panel {
   background: white;
@@ -1457,6 +1474,14 @@ onUnmounted(() => {
   }
   .market-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* FIFA 卡：手机端隐藏左侧版本，显示右侧底部版本 */
+  .fifa-desktop {
+    display: none;
+  }
+  .fifa-mobile {
+    display: block;
   }
 }
 
