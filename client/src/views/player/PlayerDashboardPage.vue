@@ -294,10 +294,11 @@
                   :title="stage.label"
                 >
                   <img
-                    v-if="stage.imageUrl"
+                    v-if="stage.imageUrl && !brokenImages.has(stage.imageUrl)"
                     :src="stage.imageUrl"
                     class="stage-preview-img"
                     :alt="stage.label"
+                    @error="brokenImages.add(stage.imageUrl)"
                   />
                   <span v-else class="stage-preview-emoji">{{ stage.emoji }}</span>
                   <span class="stage-preview-label">{{ stage.label }}</span>
@@ -313,7 +314,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
 import api from '@/api'
@@ -412,6 +413,7 @@ interface SpeciesOption {
 }
 const speciesOptions = ref<SpeciesOption[]>([])
 const speciesLoading = ref(false)
+const brokenImages = reactive(new Set<string>())
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 function triggerFeedEffect() {

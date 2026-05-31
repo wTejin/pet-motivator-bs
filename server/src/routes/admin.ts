@@ -12,7 +12,7 @@ export const adminRouter = Router()
 
 const imageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const dir = path.join(__dirname, '../../public/images/pets')
+    const dir = '/app/public/images/pets'
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     cb(null, dir)
   },

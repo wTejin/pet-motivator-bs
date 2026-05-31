@@ -12,7 +12,7 @@ export const coachRouter = Router()
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, path.join(__dirname, '../../public/avatars'))
+    cb(null, '/app/public/avatars')
   },
   filename: (_req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9)

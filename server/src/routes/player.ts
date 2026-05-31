@@ -11,7 +11,7 @@ export const publicRouter = Router()
 
 // ── 头像上传配置 ──
 const avatarStorage = multer.diskStorage({
-  destination: path.join(__dirname, '../../public/avatars'),
+  destination: '/app/public/avatars',
   filename(_req, file, cb) {
     const ext = path.extname(file.originalname) || '.png'
     cb(null, `avatar-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`)
