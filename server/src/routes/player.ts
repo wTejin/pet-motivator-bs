@@ -1107,6 +1107,7 @@ publicRouter.get('/public/pet-species', async (_req, res) => {
       id: s.id,
       name: s.name,
       category: s.category,
+      description: s.description,
       emoji: s.emoji,
       backgroundColor: s.backgroundColor,
       accentColor: s.accentColor,

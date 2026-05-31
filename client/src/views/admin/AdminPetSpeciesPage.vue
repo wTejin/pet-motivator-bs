@@ -77,6 +77,30 @@
         <!-- Expanded Detail -->
         <div v-if="expandedId === s.id" class="species-detail">
           <div class="detail-section">
+            <h4 class="section-title">📋 基本信息</h4>
+            <div class="config-row">
+              <div class="config-field">
+                <label>分类</label>
+                <select v-model="s.category" class="form-input form-field-select" style="width: 100%;">
+                  <option v-for="cat in CATEGORY_OPTIONS" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+              </div>
+              <div class="config-field">
+                <label>Emoji</label>
+                <button class="emoji-picker-btn" @click="openEmojiPicker((e: string) => s.emoji = e)">
+                  <span class="emoji-preview">{{ s.emoji || '✨' }}</span>
+                </button>
+              </div>
+            </div>
+            <div class="config-row" style="margin-top: 8px;">
+              <div class="config-field" style="flex: 2;">
+                <label>性格描述</label>
+                <input v-model="s.description" class="form-input" placeholder="在选宠物时展示给队员看的介绍语" />
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section">
             <h4 class="section-title">🎨 外观配置</h4>
             <div class="config-row">
               <div class="config-field">
@@ -92,12 +116,6 @@
                   <input v-model="s.accentColor" class="form-input" />
                   <span class="color-preview-lg" :style="{ background: s.accentColor }"></span>
                 </div>
-              </div>
-              <div class="config-field">
-                <label>Emoji</label>
-                <button class="emoji-picker-btn" @click="openEmojiPicker((e: string) => s.emoji = e)">
-                  <span class="emoji-preview">{{ s.emoji || '✨' }}</span>
-                </button>
               </div>
             </div>
           </div>
@@ -166,7 +184,14 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">分类</label>
-              <input v-model="createForm.category" class="form-input" placeholder="如: dog" />
+              <select v-model="createForm.category" class="form-input">
+                <option value="" disabled>请选择分类</option>
+                <option v-for="cat in CATEGORY_OPTIONS" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">性格描述</label>
+              <input v-model="createForm.description" class="form-input" placeholder="比如：它看着威风凛凛，其实是个爱卖萌的守护神！" />
             </div>
             <div class="form-group">
               <label class="form-label">Emoji</label>
@@ -299,6 +324,8 @@ interface StageInfo {
   label: string
 }
 
+const CATEGORY_OPTIONS = ['狗系', '猫系', '玄幻系', '鸟系', '水系']
+
 interface SpeciesItem {
   id: string
   name: string
@@ -328,6 +355,7 @@ const createForm = ref({
   id: '',
   name: '',
   category: '',
+  description: '',
   emoji: '',
   backgroundColor: '#e3f2fd',
   accentColor: '#42a5f5',
@@ -510,7 +538,7 @@ async function submitCreate() {
     if (res.data.success) {
       showCreate.value = false
       createForm.value = {
-        id: '', name: '', category: '', emoji: '',
+        id: '', name: '', category: '', description: '', emoji: '',
         backgroundColor: '#e3f2fd', accentColor: '#42a5f5',
         stages: defaultStages(),
       }

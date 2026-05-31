@@ -283,6 +283,8 @@
                 <span v-if="s.emoji" class="species-header-emoji">{{ s.emoji }}</span>
                 <span class="species-option-name">{{ s.name }}</span>
               </div>
+              <!-- 性格描述 -->
+              <p v-if="s.description" class="species-option-desc">{{ s.description }}</p>
               <!-- 阶段预览 -->
               <div class="species-stages-preview">
                 <div
@@ -402,6 +404,7 @@ interface SpeciesOption {
   id: string
   name: string
   emoji: string
+  description: string
   backgroundColor: string
   accentColor: string
   stageList: StagePreview[]
@@ -516,6 +519,7 @@ async function loadData() {
               id: s.id,
               name: s.name,
               emoji: s.emoji || '',
+              description: s.description || '',
               backgroundColor: s.backgroundColor || '#e3f2fd',
               accentColor: s.accentColor || '#42a5f5',
               stageList,
@@ -1815,6 +1819,15 @@ onUnmounted(() => {
   font-weight: 700;
   color: #1a1a2e;
   text-align: center;
+}
+
+.species-option-desc {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0 4px;
 }
 
 .species-stages-preview {
