@@ -187,30 +187,46 @@ adminRouter.post('/pet-species', authenticate, requireRole('admin'), async (req:
     return res.json({ success: true, data: { count: species.length } })
   }
 
-  const { id, name, category, emoji, backgroundColor, accentColor, stages } = req.body
+  const { id, name, category, description, emoji, backgroundColor, accentColor, stages } = req.body
   if (!id || !name || !category) {
-    return res.status(400).json({ success: false, error: 'id、name、category 必填' })
+    return res.status(400).json({ success: false, error: 'id、name、分类必填' })
   }
-  const defaultStages = {
+  if (!/^[a-z0-9-]+$/.test(id)) {
+    return res.status(400).json({ success: false, error: 'ID 只能包含小写字母、数字和连字符' })
+  }
+
+  // 检查 ID 是否已存在
+  const existing = await db.petSpeciesDef.findUnique({ where: { id } })
+  if (existing) {
+    return res.status(400).json({ success: false, error: `物种ID "${id}" 已存在，请换一个` })
+  }
+
+  const finalStages = stages || {
     egg: { emoji: '🥚', imageUrl: '', label: '蛋' },
-    level1: { emoji: emoji || '🐣', imageUrl: '', label: '幼崽' },
-    level2: { emoji: emoji || '🐥', imageUrl: '', label: '少年' },
-    level3: { emoji: emoji || '🐤', imageUrl: '', label: '成年' },
-    rare: { emoji: emoji || '✨', imageUrl: '', label: '稀有' },
+    level1: { emoji: '🐣', imageUrl: '', label: '幼崽' },
+    level2: { emoji: '🐥', imageUrl: '', label: '少年' },
+    level3: { emoji: '🐤', imageUrl: '', label: '成年' },
+    rare: { emoji: '✨', imageUrl: '', label: '稀有' },
   }
-  const item = await db.petSpeciesDef.create({
-    data: {
-      id,
-      name,
-      category,
-      description: req.body.description || '',
-      emoji: emoji || '🥚',
-      backgroundColor: backgroundColor || '#e3f2fd',
-      accentColor: accentColor || '#42a5f5',
-      stages: stages || defaultStages,
-    },
-  })
-  res.json({ success: true, data: { ...item, stages: JSON.parse(JSON.stringify(item.stages)) } })
+
+  try {
+    const item = await db.petSpeciesDef.create({
+      data: {
+        id,
+        name,
+        category,
+        description: description || '',
+        emoji: emoji || '🥚',
+        backgroundColor: backgroundColor || '#e3f2fd',
+        accentColor: accentColor || '#42a5f5',
+        stages: finalStages,
+      },
+    })
+    res.json({ success: true, data: { ...item, stages: JSON.parse(JSON.stringify(item.stages)) } })
+  } catch (e: any) {
+    console.error('创建物种失败:', e.message)
+    res.status(500).json({ success: false, error: `创建失败: ${e.message}` })
+  }
 })
 
 adminRouter.put('/pet-species/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {

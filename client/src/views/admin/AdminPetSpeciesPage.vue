@@ -550,9 +550,11 @@ async function submitCreate() {
         stages: defaultStages(),
       }
       await loadSpecies()
+    } else {
+      alert(res.data.error || '创建失败')
     }
-  } catch {
-    alert('创建失败')
+  } catch (e: any) {
+    alert(e?.response?.data?.error || '创建失败')
   }
 }
 
