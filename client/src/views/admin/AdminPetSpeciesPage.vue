@@ -123,33 +123,33 @@
           <div class="detail-section">
             <h4 class="section-title">
               📈 成长阶段
-              <span class="stage-hint">共 {{ Object.keys(s.stages || {}).length }} 个阶段</span>
+              <span class="stage-hint">共 {{ orderedStages(s.stages).length }} 个阶段</span>
             </h4>
             <div class="stages-timeline">
-              <div v-for="(stage, key, idx) in s.stages" :key="key" class="stage-card">
+              <div v-for="(stage, idx) in orderedStages(s.stages)" :key="stage.key" class="stage-card">
                 <div class="stage-step">{{ idx + 1 }}</div>
                 <div class="stage-body">
                   <div class="stage-header-row">
-                    <span class="stage-key">{{ stage.label || key }}</span>
+                    <span class="stage-key">{{ stage.label || STAGE_LABELS[stage.key] || stage.key }}</span>
                     <span class="stage-emoji-lg">{{ stage.emoji }}</span>
                   </div>
                   <div class="stage-inputs">
                     <button
                       class="stage-emoji-btn"
-                      @click="openEmojiPicker((e: string) => stage.emoji = e)"
+                      @click="openEmojiPicker((e: string) => (s.stages as any)[stage.key].emoji = e)"
                     >
                       <span>{{ stage.emoji || '✨' }}</span>
                     </button>
                     <div class="image-upload-row">
-                      <input v-model="stage.imageUrl" class="stage-input" placeholder="图片URL" />
+                      <input v-model="(s.stages as any)[stage.key].imageUrl" class="stage-input" placeholder="图片URL" />
                       <input
-                        :ref="el => setFileInputRef(el as HTMLInputElement, s.id, key)"
+                        :ref="el => setFileInputRef(el as HTMLInputElement, s.id, stage.key)"
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                         class="hidden-file-input"
-                        @change="handleFileChange($event, stage)"
+                        @change="handleFileChange($event, (s.stages as any)[stage.key])"
                       />
-                      <button class="btn-upload" @click="triggerUpload(s.id, key)">📤</button>
+                      <button class="btn-upload" @click="triggerUpload(s.id, stage.key)">📤</button>
                     </div>
                   </div>
                   <img v-if="stage.imageUrl" :src="stage.imageUrl" class="stage-preview" />
@@ -220,38 +220,38 @@
             <h4 class="section-title" style="margin-bottom: 10px;">📈 成长阶段配置</h4>
             <div class="stages-timeline" style="gap: 8px;">
               <div
-                v-for="(stage, key, idx) in createForm.stages"
-                :key="key"
+                v-for="(stage, idx) in orderedStages(createForm.stages as Record<string, StageInfo>)"
+                :key="stage.key"
                 class="stage-card"
                 style="min-width: 120px; padding: 10px;"
               >
                 <div class="stage-step">{{ idx + 1 }}</div>
                 <div class="stage-body">
                   <div class="stage-header-row" style="margin-bottom: 6px;">
-                    <span class="stage-key">{{ stage.label || key }}</span>
+                    <span class="stage-key">{{ stage.label || STAGE_LABELS[stage.key] || stage.key }}</span>
                     <span class="stage-emoji-lg">{{ stage.emoji }}</span>
                   </div>
                   <div class="stage-inputs" style="gap: 4px;">
                     <button
                       class="stage-emoji-btn"
-                      @click="openEmojiPicker((e: string) => (createForm.stages as any)[key].emoji = e)"
+                      @click="openEmojiPicker((e: string) => (createForm.stages as any)[stage.key].emoji = e)"
                     >
                       <span>{{ stage.emoji || '✨' }}</span>
                     </button>
                     <div class="image-upload-row">
                       <input
-                        v-model="(createForm.stages as any)[key].imageUrl"
+                        v-model="(createForm.stages as any)[stage.key].imageUrl"
                         class="stage-input"
                         placeholder="图片URL"
                       />
                       <input
-                        :ref="(el: any) => setCreateFileRef(el as HTMLInputElement, key as string)"
+                        :ref="(el: any) => setCreateFileRef(el as HTMLInputElement, stage.key)"
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                         class="hidden-file-input"
-                        @change="handleCreateStageFile($event, key as string)"
+                        @change="handleCreateStageFile($event, stage.key)"
                       />
-                      <button class="btn-upload" @click="triggerCreateUpload(key as string)">📤</button>
+                      <button class="btn-upload" @click="triggerCreateUpload(stage.key)">📤</button>
                     </div>
                   </div>
                   <img
@@ -325,6 +325,13 @@ interface StageInfo {
 }
 
 const CATEGORY_OPTIONS = ['狗系', '猫系', '玄幻系', '鸟系', '水系']
+const STAGE_ORDER = ['egg', 'level1', 'level2', 'level3', 'rare']
+const STAGE_LABELS: Record<string, string> = { egg: '蛋', level1: '幼崽', level2: '少年', level3: '成年', rare: '稀有' }
+
+// 将 stages 对象转为固定顺序的数组
+function orderedStages(stages: Record<string, StageInfo>): { key: string; emoji: string; imageUrl: string; label: string }[] {
+  return STAGE_ORDER.filter(k => stages[k]).map(k => ({ key: k, ...stages[k] }))
+}
 
 interface SpeciesItem {
   id: string
