@@ -19,6 +19,8 @@ services:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/pet-motivator
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       PORT: 3000
+    volumes:
+      - avatars_data:/app/public/avatars
     depends_on:
       - postgres
     restart: unless-stopped
@@ -36,3 +38,4 @@ services:
 
 volumes:
   pgdata:
+  avatars_data:
