@@ -14,6 +14,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
-RUN mkdir -p /app/public/avatars /app/public/images/pets
+COPY public ./public-default/
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/index.js"]
+CMD ["sh", "-c", "\
+  mkdir -p /app/public/avatars /app/public/images/pets && \
+  cp -n /app/public-default/avatars/* /app/public/avatars/ 2>/dev/null; \
+  cp -n /app/public-default/images/pets/* /app/public/images/pets/ 2>/dev/null; \
+  npx prisma migrate deploy && node dist/src/index.js\
+"]
