@@ -32,7 +32,10 @@
       <div class="dashboard-body">
         <!-- Left: Pet + FIFA Card -->
         <section class="left-section">
-          <div class="pet-panel">
+          <div
+            class="pet-panel"
+            :style="pet?.species?.accentColor ? { borderTopColor: pet.species.accentColor } : {}"
+          >
             <!-- 背景铺满面板上半部分 -->
             <div
               v-if="pet?.background?.imageUrl || pet?.background?.cssGradient"
@@ -269,7 +272,10 @@
               v-for="s in speciesOptions"
               :key="s.id"
               class="species-option-card"
-              :style="{ background: s.backgroundColor || '#e3f2fd' }"
+              :style="{
+                background: s.backgroundColor || '#e3f2fd',
+                borderTopColor: s.accentColor || '#42a5f5',
+              }"
               @click="chooseSpecies(s.id)"
             >
               <!-- 物种标题 -->
@@ -327,6 +333,8 @@ interface PetData {
   currentPoints: number
   species: {
     stages: Record<string, { emoji: string; imageUrl?: string }>
+    accentColor?: string
+    backgroundColor?: string
   } | null
   status?: string[]
   background?: {
@@ -395,6 +403,7 @@ interface SpeciesOption {
   name: string
   emoji: string
   backgroundColor: string
+  accentColor: string
   stageList: StagePreview[]
   maxStageLabel: string
 }
@@ -508,6 +517,7 @@ async function loadData() {
               name: s.name,
               emoji: s.emoji || '',
               backgroundColor: s.backgroundColor || '#e3f2fd',
+              accentColor: s.accentColor || '#42a5f5',
               stageList,
               maxStageLabel: maxStage ? `最高: ${maxStage.label}` : '稀有形态',
             }
@@ -1016,6 +1026,7 @@ onUnmounted(() => {
 .pet-panel {
   background: white;
   border-radius: 16px;
+  border-top: 5px solid #42a5f5;
   padding: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
@@ -1777,6 +1788,8 @@ onUnmounted(() => {
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   border: 2px solid transparent;
+  border-top: 4px solid;
+  border-top-color: #42a5f5;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 

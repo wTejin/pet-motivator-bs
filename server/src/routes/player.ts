@@ -1108,6 +1108,8 @@ publicRouter.get('/public/pet-species', async (_req, res) => {
       name: s.name,
       category: s.category,
       emoji: s.emoji,
+      backgroundColor: s.backgroundColor,
+      accentColor: s.accentColor,
       stages: JSON.parse(JSON.stringify(s.stages)),
     })),
   })
