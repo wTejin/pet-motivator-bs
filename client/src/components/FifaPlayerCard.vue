@@ -31,7 +31,6 @@
           <div class="frame-stud top"></div>
           <div class="frame-stud bottom"></div>
           <div class="frame-shine"></div>
-          <span v-if="editable" class="frame-edit-hint">点击更换</span>
         </div>
         <div class="radar-wrap">
           <RadarChart
@@ -328,20 +327,6 @@ function isImageAvatar(avatar: string): boolean {
 .photo-frame.editable:hover {
   transform: scale(1.03);
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
-}
-
-.frame-edit-hint {
-  position: absolute;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.4);
-  padding: 2px 8px;
-  border-radius: 8px;
-  z-index: 3;
-  pointer-events: none;
 }
 
 /* 相框高光 */

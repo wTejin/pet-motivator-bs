@@ -675,12 +675,18 @@ async function handleAvatarUpload(file: File): Promise<string> {
 // 头像变更回调（emoji / logo / photo URL）
 async function handleAvatarChange(avatar: string) {
   try {
-    await api.put(`/public/player/${playerId}/avatar`, { avatar })
+    const res = await api.put(`/public/player/${playerId}/avatar`, { avatar })
     if (playerStats.value) {
       playerStats.value.avatar = avatar
     }
-  } catch (e) {
-    console.error('头像更新失败', e)
+    // 更新积分（头像消耗了10分）
+    if (res.data.success && currentPoints.value >= 10) {
+      currentPoints.value -= 10
+    }
+  } catch (e: any) {
+    const msg = e?.response?.data?.error || '头像更新失败'
+    actionError.value = msg
+    setTimeout(() => { actionError.value = '' }, 4000)
   }
 }
 

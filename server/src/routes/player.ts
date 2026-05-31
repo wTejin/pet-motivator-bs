@@ -993,7 +993,7 @@ publicRouter.post('/public/player/:playerId/avatar', avatarUpload.single('avatar
   res.json({ success: true, data: { url } })
 })
 
-// 玩家更新头像（emoji 或 URL）
+// 玩家更新头像（emoji 或 URL）— 每周限1次，消耗10积分
 publicRouter.put('/public/player/:playerId/avatar', async (req: Request, res: Response) => {
   const playerId = req.params.playerId as string
   const { avatar } = req.body
@@ -1002,7 +1002,34 @@ publicRouter.put('/public/player/:playerId/avatar', async (req: Request, res: Re
   const player = await db.player.findUnique({ where: { id: playerId } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
 
-  await db.player.update({ where: { id: playerId }, data: { avatar, updatedAt: Date.now() } })
+  const now = Date.now()
+  const SEVEN_DAYS = 7 * 24 * 3600 * 1000
+  const AVATAR_COST = 10
+
+  // 检查冷却时间
+  if (player.lastAvatarChangeAt) {
+    const elapsed = now - Number(player.lastAvatarChangeAt)
+    if (elapsed < SEVEN_DAYS) {
+      const remainingDays = Math.ceil((SEVEN_DAYS - elapsed) / (24 * 3600 * 1000))
+      return res.status(400).json({ success: false, error: `每7天只能更换一次头像，还剩 ${remainingDays} 天` })
+    }
+  }
+
+  // 检查积分
+  if (player.currentPoints < AVATAR_COST) {
+    return res.status(400).json({ success: false, error: `积分不足，更换头像需要 ${AVATAR_COST} 积分` })
+  }
+
+  await db.player.update({
+    where: { id: playerId },
+    data: {
+      avatar,
+      currentPoints: { decrement: AVATAR_COST },
+      lastAvatarChangeAt: now,
+      updatedAt: now,
+    },
+  })
+
   res.json({ success: true, data: { avatar } })
 })
 

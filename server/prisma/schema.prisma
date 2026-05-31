@@ -44,10 +44,11 @@ model Player {
   name           String
   avatar         String @default("😊")
   age            Int?
-  currentPoints  Int @default(0)
-  isActive       Boolean @default(true)
-  createdAt      BigInt
-  updatedAt      BigInt
+  currentPoints      Int @default(0)
+  isActive           Boolean @default(true)
+  lastAvatarChangeAt BigInt?
+  createdAt          BigInt
+  updatedAt          BigInt
 
   coach         Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
   pet           Pet?
