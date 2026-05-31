@@ -987,14 +987,14 @@ playerRouter.post('/:playerId/shop/use', handleUse)
 // ===== 头像 =====
 
 // 玩家上传头像文件
-publicRouter.post('/player/:playerId/avatar', avatarUpload.single('avatar'), async (req: Request, res: Response) => {
+publicRouter.post('/public/player/:playerId/avatar', avatarUpload.single('avatar'), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ success: false, error: '未收到文件' })
   const url = `/avatars/${req.file.filename}`
   res.json({ success: true, data: { url } })
 })
 
 // 玩家更新头像（emoji 或 URL）
-publicRouter.put('/player/:playerId/avatar', async (req: Request, res: Response) => {
+publicRouter.put('/public/player/:playerId/avatar', async (req: Request, res: Response) => {
   const playerId = req.params.playerId as string
   const { avatar } = req.body
   if (!avatar || typeof avatar !== 'string') return res.status(400).json({ success: false, error: '缺少头像值' })
