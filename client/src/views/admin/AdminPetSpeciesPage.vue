@@ -152,7 +152,8 @@
                       <button class="btn-upload" @click="triggerUpload(s.id, stage.key)">📤</button>
                     </div>
                   </div>
-                  <img v-if="stage.imageUrl" :src="stage.imageUrl" class="stage-preview" />
+                  <img v-if="stage.imageUrl && !brokenImages.has(stage.imageUrl)" :src="stage.imageUrl" class="stage-preview" @error="onImgError(stage.imageUrl)" />
+                  <span v-else-if="stage.imageUrl && brokenImages.has(stage.imageUrl)" class="broken-img-fallback">🖼️</span>
                 </div>
               </div>
             </div>
@@ -317,6 +318,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { adminApi } from '@/api'
+import { brokenImages, onImgError } from '@/composables/useBrokenImages'
 
 interface StageInfo {
   emoji: string

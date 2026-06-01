@@ -8,18 +8,19 @@
     <div class="pet-stage-area">
       <div v-if="hasEffect('aura')" class="effect-aura"></div>
       <template v-if="petImageUrl">
-        <img :src="petImageUrl" alt="pet" class="pet-main-img" />
+        <img v-if="!brokenImages.has(petImageUrl)" :src="petImageUrl" alt="pet" class="pet-main-img" @error="onImgError(petImageUrl)" />
       </template>
       <template v-else>
         <span class="pet-emoji">{{ petEmoji }}</span>
       </template>
       <template v-for="acc in accessories" :key="acc.id">
         <img
-          v-if="acc.imageUrl"
+          v-if="acc.imageUrl && !brokenImages.has(acc.imageUrl)"
           :src="acc.imageUrl"
           class="pet-accessory"
           :style="accStyle(acc)"
           alt="accessory"
+          @error="onImgError(acc.imageUrl)"
         />
         <span
           v-else
@@ -34,6 +35,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { brokenImages, onImgError } from '@/composables/useBrokenImages'
 
 interface AccessoryItem {
   id: string
