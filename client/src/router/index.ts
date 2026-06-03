@@ -32,10 +32,14 @@ const router = createRouter({
       component: () => import('@/views/coach/CoachLayout.vue'),
       children: [
         { path: '', redirect: '/coach/score' },
+        { path: 'dashboard', name: 'coachBioDashboard', component: () => import('@/views/coach/CoachDashboardPage.vue') },
         { path: 'score', name: 'coachScore', component: () => import('@/views/coach/CoachScorePage.vue') },
-        { path: 'score-config', name: 'coachScoreConfig', component: () => import('@/views/coach/CoachScoreConfigPage.vue') },
+
         { path: 'players', name: 'coachPlayers', component: () => import('@/views/coach/CoachPlayersPage.vue') },
-        { path: 'player-cards', name: 'coachPlayerCards', component: () => import('@/views/coach/CoachPlayerCardsPage.vue') },
+        { path: 'players/:id/detail', name: 'playerDetail', component: () => import('@/views/coach/PlayerDetailPage.vue') },
+        { path: 'players/:id/assess', name: 'playerAssess', component: () => import('@/views/coach/AssessmentPage.vue') },
+        { path: 'players/:id/biometrics', name: 'playerBiometrics', component: () => import('@/views/coach/BiometricsPage.vue') },
+        { path: 'players/:id/physical-test', name: 'playerPhysicalTest', component: () => import('@/views/coach/PhysicalTestPage.vue') },
         { path: 'shop', redirect: '/coach/score' },
       ],
     },

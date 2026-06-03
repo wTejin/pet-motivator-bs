@@ -31,11 +31,11 @@ model Coach {
 
   players          Player[]
   scoreRecords     ScoreRecord[]
-  scoreDimensions  ScoreDimension[]
-  bonusRules       BonusRule[]
   shopItems        ShopItem[]
   customIndicators CustomIndicator[]
-  sessions         Session[]
+  dailyAssessments DailyAssessment[]
+  biometrics       PlayerBiometric[]
+  physicalTests    PhysicalTest[]
 }
 
 model Player {
@@ -44,6 +44,12 @@ model Player {
   name           String
   avatar         String @default("😊")
   age            Int?
+  // ── Bio-Leap 扩展字段 ──
+  birthDate         String? // ISO date "YYYY-MM-DD"
+  trainingStartDate String? // ISO date "YYYY-MM-DD"
+  gender            String? // "male" | "female"
+  fatherHeightCm    Float?  // 父亲身高 cm
+  motherHeightCm    Float?  // 母亲身高 cm
   currentPoints      Int @default(0)
   isActive           Boolean @default(true)
   lastAvatarChangeAt BigInt?
@@ -55,8 +61,10 @@ model Player {
   scoreRecords  ScoreRecord[]
   transactions  TransactionRecord[]
   inventory     PlayerInventory[]
-  statsCache    PlayerStatsCache?
-  attendances   Attendance[]
+  dailyAssessments  DailyAssessment[]
+  biometrics        PlayerBiometric[]
+  physicalTests     PhysicalTest[]
+  pipelineSnapshots PipelineSnapshot[]
 }
 
 model Pet {
@@ -78,31 +86,6 @@ model Pet {
   evolvedAt           BigInt
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-}
-
-model ScoreDimension {
-  id        String @id @default(uuid())
-  coachId   String
-  name      String
-  icon      String @default("⭐")
-  sortOrder Int @default(0)
-  isActive  Boolean @default(true)
-
-  coach      Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  indicators ScoreIndicator[]
-}
-
-model ScoreIndicator {
-  id            String @id @default(uuid())
-  dimensionId   String
-  name          String
-  criteria      String @default("")
-  defaultPoints Int @default(5)
-  dailyLimit    Int @default(20)
-  isActive      Boolean @default(true)
-  sortOrder     Int @default(0)
-
-  dimension ScoreDimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
 }
 
 model CustomIndicator {
@@ -151,18 +134,6 @@ model TransactionRecord {
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId, createdAt])
-}
-
-model BonusRule {
-  id        String @id @default(uuid())
-  coachId   String
-  name      String
-  points    Int
-  frequency String
-  criteria  String @default("")
-  isActive  Boolean @default(true)
-
-  coach Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
 }
 
 model ShopItem {
@@ -229,34 +200,6 @@ model PetBackgroundDef {
   thumbnailColor String
 }
 
-// 训练课次
-model Session {
-  id         String @id @default(uuid())
-  coachId    String
-  name       String   // "周三训练"
-  date       BigInt   // 时间戳
-  status     String   @default("planned") // planned/active/completed
-  createdAt  BigInt
-
-  coach       Coach @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  attendances Attendance[]
-}
-
-// 出勤记录
-model Attendance {
-  id        String @id @default(uuid())
-  sessionId String?
-  playerId  String
-  status    String // present/late/absent
-  createdAt BigInt
-
-  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  player  Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId, playerId])
-  @@index([playerId, createdAt])
-}
-
 model CustomData {
   id         String @id @default(uuid())
   coachId    String?
@@ -265,13 +208,105 @@ model CustomData {
   importedAt BigInt
 }
 
-// 学员能力数据预计算缓存（解决雷达图实时聚合性能问题）
-model PlayerStatsCache {
-  id            String @id @default(uuid())
-  playerId      String @unique
-  overall       Int    @default(0)
-  dimensionJson Json   // {维度ID: {score, indicators: [{indicatorId, score}]}}
-  updatedAt     BigInt
+// ═══════════════════════════════════════════════════════════
+// Bio-Leap 评估引擎表（从 bio-leap 移植）
+// ═══════════════════════════════════════════════════════════
+
+// ── 身体测量（季度体测数据）──
+model PlayerBiometric {
+  id              String @id @default(uuid())
+  playerId        String
+  coachId         String
+  heightCm        Float
+  weightKg        Float
+  sittingHeightCm Float
+  measuredAt      BigInt
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  coach  Coach  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, measuredAt])
+  @@index([coachId, measuredAt])
+}
+
+// ── 每日评估（教练对6维度的1-5星评分 + 12子指标）──
+model DailyAssessment {
+  id         String @id @default(uuid())
+  coachId    String
+  playerId   String
+  sessionId  String?
+  spatialIq  Int // 1-5 空间觉察
+  techExec   Int // 1-5 技术执行
+  engagement Int // 1-5 执行饱和度
+  resilience Int // 1-5 挫折复原力
+  altruism   Int // 1-5 无私协作性
+  envNoise   Int // 1-5 环境抗噪度
+  notes      String?
+  createdAt  BigInt
+
+  // ── 二级子指标（心理/战术/行为类 — 每场可观测）──
+  subScanRate       Int? // 视觉扫描频率
+  subDecisionSpeed  Int? // 决策速度与预判
+  subOffBallMove    Int? // 无球跑位
+  subRecoveryReact  Int? // 失误后即时回追
+  subReengageDef    Int? // 下一次防守对抗
+  subConfToReceive  Int? // 再次要球意愿
+  subCommunication  Int? // 场上沟通指挥
+  subCoverTeam      Int? // 补位与协防
+  subUnfamiliarPos  Int? // 不熟悉位置接受度
+  subParentBehavior Int? // 家长场边行为
+  subAttendance     Int? // 训练出勤
+  subSelfSufficient Int? // 装备自理纪律
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  coach  Coach  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+  @@index([coachId, createdAt])
+}
+
+// ── 运动表现体测（月度/季度）──
+model PhysicalTest {
+  id            String @id @default(uuid())
+  playerId      String
+  coachId       String
+  sprint10m     Float? // 0-10m 秒数
+  sprint30m     Float? // 10-30m 秒数
+  verticalJump  Float? // 弹跳 cm
+  firstTouch    Int?   // 第一脚触球 1-5
+  weakFoot      Int?   // 非惯用脚 1-5
+  shootingPower Int?   // 射门力量精度 1-5
+  workRate      Int?   // 跑动覆盖 1-5
+  agility       Float? // 敏捷性测试秒数
+  endurance     Float? // 耐力测试级别
+  passingAccuracy Int? // 传球精度 1-5
+  measuredAt    BigInt
+  notes         String?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  coach  Coach  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, measuredAt])
+  @@index([coachId, measuredAt])
+}
+
+// ── 管道快照（趋势图数据源，替换 PlayerStatsCache）──
+model PipelineSnapshot {
+  id               String @id @default(uuid())
+  playerId         String
+  overall          Int
+  potentialIndex   Int     @default(0)
+  potentialTier    String  @default("insufficient_data")
+  dimensionJson    Json
+  maturityOffset   Float
+  maturityCategory String
+  envCategory      String
+  envNoiseEma30d   Float
+  hedgingActive    Boolean
+  hedgingMultiplier Float  @default(1.0)
+  computedAt       BigInt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, computedAt])
 }

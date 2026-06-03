@@ -2,47 +2,49 @@
   <div class="coach-layout">
     <!-- Top Nav Bar -->
     <nav class="coach-nav">
-      <div class="nav-brand">
-        <span class="nav-logo">⚽</span>
-        <h1 class="nav-title">星宠契约 · 教练端</h1>
-      </div>
-      <!-- Team Name / Logo -->
-      <div class="nav-team" @click="openTeamEdit">
-        <img
-          v-if="isImageAvatar(teamLogo) && !brokenImages.has(teamLogo)"
-          :src="teamLogo"
-          class="nav-team-logo-img"
-          alt="team logo"
-          @error="onImgError(teamLogo)"
-        />
-        <span v-else class="nav-team-logo">{{ teamLogo || '⚽' }}</span>
-        <span class="nav-team-name">{{ teamName || '我的球队' }}</span>
-        <span class="nav-team-edit">✎</span>
-      </div>
-      <div class="nav-links">
-        <router-link
-          v-for="link in navLinks"
-          :key="link.to"
-          :to="link.to"
-          class="nav-link"
-          :class="{ active: $route.path === link.to || $route.path.startsWith(link.to + '/') }"
-        >
-          <span class="link-icon">{{ link.icon }}</span>
-          <span class="link-label">{{ link.label }}</span>
-        </router-link>
-      </div>
-      <div class="nav-actions">
-        <button
-          class="mode-toggle"
-          :class="auth.playerMode === 'open' ? 'mode-open' : 'mode-display'"
-          @click="togglePlayerMode"
-          :title="auth.playerMode === 'open' ? '点击切换为仅展示' : '点击切换为允许操作'"
-        >
-          <span class="mode-icon">{{ auth.playerMode === 'open' ? '🔓' : '🔒' }}</span>
-          <span class="mode-label">{{ auth.playerMode === 'open' ? '允许操作' : '仅展示' }}</span>
-        </button>
-        <span class="nav-name hidden sm:inline">{{ auth.user?.name }}</span>
-        <button class="nav-logout" @click="auth.logout()">退出</button>
+      <div class="nav-inner">
+        <div class="nav-brand">
+          <span class="nav-logo">⚽</span>
+          <h1 class="nav-title">星宠契约 · 教练端</h1>
+        </div>
+        <!-- Team Name / Logo -->
+        <div class="nav-team" @click="openTeamEdit">
+          <img
+            v-if="isImageAvatar(teamLogo) && !brokenImages.has(teamLogo)"
+            :src="teamLogo"
+            class="nav-team-logo-img"
+            alt="team logo"
+            @error="onImgError(teamLogo)"
+          />
+          <span v-else class="nav-team-logo">{{ teamLogo || '⚽' }}</span>
+          <span class="nav-team-name">{{ teamName || '我的球队' }}</span>
+          <span class="nav-team-edit">✎</span>
+        </div>
+        <div class="nav-links">
+          <router-link
+            v-for="link in navLinks"
+            :key="link.to"
+            :to="link.to"
+            class="nav-link"
+            :class="{ active: $route.path === link.to || $route.path.startsWith(link.to + '/') }"
+          >
+            <span class="link-icon">{{ link.icon }}</span>
+            <span class="link-label">{{ link.label }}</span>
+          </router-link>
+        </div>
+        <div class="nav-actions">
+          <button
+            class="mode-toggle"
+            :class="auth.playerMode === 'open' ? 'mode-open' : 'mode-display'"
+            @click="togglePlayerMode"
+            :title="auth.playerMode === 'open' ? '点击切换为仅展示' : '点击切换为允许操作'"
+          >
+            <span class="mode-icon">{{ auth.playerMode === 'open' ? '🔓' : '🔒' }}</span>
+            <span class="mode-label">{{ auth.playerMode === 'open' ? '允许操作' : '仅展示' }}</span>
+          </button>
+          <span class="nav-name hidden sm:inline">{{ auth.user?.name }}</span>
+          <button class="nav-logout" @click="auth.logout()">退出</button>
+        </div>
       </div>
     </nav>
 
@@ -123,7 +125,6 @@ const auth = useAuthStore()
 const navLinks = [
   { to: '/coach/score', icon: '📝', label: '快速记分' },
   { to: '/coach/players', icon: '👥', label: '球员管理' },
-  { to: '/coach/player-cards', icon: '🃏', label: '球员卡' },
 ]
 
 const showTeamEdit = ref(false)
@@ -215,13 +216,21 @@ async function togglePlayerMode() {
   position: sticky;
   top: 0;
   z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
+  padding: 0 20px;
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ── Nav 内容居中容器（与页面内容区对齐） ── */
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 0;
 }
 
 .nav-brand {
@@ -312,11 +321,25 @@ async function togglePlayerMode() {
   min-height: 0;
 }
 
+/*
+ * ════════════════════════════════════════════════════════
+ *  响应式断点
+ *  📱 手机 ≤640px     → 导航折叠 + 紧凑间距
+ *  📱➜💻 平板 641-1024 → 标准导航
+ *  💻 桌面 1025-1400  → 宽松间距（默认）
+ *  🖥️ 智慧屏 ≥1401    → 大字号 + 宽间距
+ * ════════════════════════════════════════════════════════
+ */
+
+/* ── 手机 (≤640px) ── */
 @media (max-width: 640px) {
   .coach-nav {
-    padding: 10px 12px;
+    padding: 0 12px;
+  }
+  .nav-inner {
     flex-wrap: wrap;
     gap: 8px;
+    padding: 10px 0;
   }
   .nav-title {
     font-size: 15px;
@@ -328,6 +351,67 @@ async function togglePlayerMode() {
   }
   .coach-content {
     padding: 12px 12px 20px;
+  }
+}
+
+/* ── 智慧大屏 (≥1401px)  教室触屏 / 投影 ── */
+@media (min-width: 1401px) {
+  .coach-nav {
+    padding: 0 32px;
+  }
+  .nav-inner {
+    max-width: 1600px;
+    padding: 16px 0;
+  }
+  .nav-logo {
+    font-size: 32px;
+  }
+  .nav-title {
+    font-size: 24px;
+  }
+  .nav-link {
+    font-size: 16px;
+    padding: 10px 20px;
+    border-radius: 12px;
+  }
+  .link-icon {
+    font-size: 20px;
+  }
+  .nav-name {
+    font-size: 16px;
+  }
+  .nav-logout {
+    font-size: 15px;
+    padding: 8px 18px;
+  }
+  .nav-team-name {
+    font-size: 16px;
+  }
+  .nav-team-logo {
+    font-size: 24px;
+  }
+  .nav-team-logo-img {
+    width: 32px;
+    height: 32px;
+  }
+  .mode-toggle {
+    font-size: 14px;
+    padding: 8px 16px;
+  }
+  .mode-icon {
+    font-size: 16px;
+  }
+
+  .coach-content {
+    padding: 24px 32px 32px;
+  }
+
+  .coach-footer {
+    padding: 16px 32px;
+  }
+  .footer-link {
+    font-size: 16px;
+    padding: 10px 24px;
   }
 }
 

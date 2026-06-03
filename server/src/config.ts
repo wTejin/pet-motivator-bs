@@ -6,6 +6,8 @@ export const config = {
   superAdminPassword: process.env.SUPER_ADMIN_PASSWORD || 'admin123',
   trialDays: 7,
   defaultPasswordDigits: 6,
+  biometricsMaxAgeDays: 90,  // Bio-Leap: 体测过期天数
+  physicalTestMaxAgeDays: 60, // Bio-Leap: 运动表现体测过期天数
 }
 
 export function getDefaultPassword(phone: string): string {

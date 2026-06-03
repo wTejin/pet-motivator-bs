@@ -123,6 +123,9 @@ export const coachApi = {
   deletePlayer(id: string) {
     return api.delete(`/coach/players/${id}`)
   },
+  getPlayerDetail(id: string) {
+    return api.get(`/coach/players/${id}/detail`)
+  },
   addScore(data: Record<string, unknown>) {
     return api.post('/coach/scores', data)
   },
@@ -131,27 +134,6 @@ export const coachApi = {
   },
   getPlayerStats(playerId: string) {
     return api.get(`/coach/player-stats/${playerId}`)
-  },
-  getDimensions() {
-    return api.get('/coach/dimensions')
-  },
-  createDimension(data: Record<string, unknown>) {
-    return api.post('/coach/dimensions', data)
-  },
-  updateDimension(id: string, data: Record<string, unknown>) {
-    return api.put(`/coach/dimensions/${id}`, data)
-  },
-  deleteDimension(id: string) {
-    return api.delete(`/coach/dimensions/${id}`)
-  },
-  createIndicator(data: Record<string, unknown>) {
-    return api.post('/coach/indicators', data)
-  },
-  updateIndicator(id: string, data: Record<string, unknown>) {
-    return api.put(`/coach/indicators/${id}`, data)
-  },
-  deleteIndicator(id: string) {
-    return api.delete(`/coach/indicators/${id}`)
   },
   getCustomIndicators() {
     return api.get('/coach/custom-indicators')
@@ -164,12 +146,6 @@ export const coachApi = {
   },
   deleteCustomIndicator(id: string) {
     return api.delete(`/coach/custom-indicators/${id}`)
-  },
-  getBonusRules() {
-    return api.get('/coach/bonus-rules')
-  },
-  updateBonusRule(id: string, data: Record<string, unknown>) {
-    return api.put(`/coach/bonus-rules/${id}`, data)
   },
   getMode() {
     return api.get('/coach/mode')
@@ -194,11 +170,132 @@ export const coachApi = {
   updateProfile(data: Record<string, unknown>) {
     return api.put('/coach/me', data)
   },
+  // ── Bio-Leap 评估 ──
+  postAssessment(playerId: string, data: Record<string, unknown>) {
+    return api.post(`/coach/players/${playerId}/assessments`, data)
+  },
+  getAssessments(playerId: string, params?: Record<string, unknown>) {
+    return api.get(`/coach/players/${playerId}/assessments`, { params })
+  },
+  // ── Bio-Leap 体测 ──
+  postBiometrics(playerId: string, data: Record<string, unknown>) {
+    return api.post(`/coach/players/${playerId}/biometrics`, data)
+  },
+  getBiometrics(playerId: string) {
+    return api.get(`/coach/players/${playerId}/biometrics`)
+  },
+  deleteBiometrics(id: string) {
+    return api.delete(`/coach/biometrics/${id}`)
+  },
+  // ── Bio-Leap 运动表现体测 ──
+  postPhysicalTest(playerId: string, data: Record<string, unknown>) {
+    return api.post(`/coach/players/${playerId}/physical-tests`, data)
+  },
+  getPhysicalTests(playerId: string) {
+    return api.get(`/coach/players/${playerId}/physical-tests`)
+  },
+  deletePhysicalTest(id: string) {
+    return api.delete(`/coach/physical-tests/${id}`)
+  },
+  // ── Bio-Leap 管道 ──
+  computePipeline(playerId: string) {
+    return api.post(`/coach/players/${playerId}/compute`)
+  },
+  getPipelineSnapshot(playerId: string) {
+    return api.get(`/coach/players/${playerId}/snapshot`)
+  },
+  getPipelineSnapshots(playerId: string, params?: Record<string, unknown>) {
+    return api.get(`/coach/players/${playerId}/snapshots`, { params })
+  },
+  getPipelineDebug(playerId: string) {
+    return api.get(`/coach/players/${playerId}/debug`)
+  },
+}
+
+// ═══════════════════════════════════════════════════════════
+// Bio-Leap API（供 bio-leap 组件使用，与 bio-leap 命名一致）
+// ═══════════════════════════════════════════════════════════
+
+export const assessmentApi = {
+  create(data: Record<string, unknown>) {
+    return api.post(`/coach/players/${data.playerId}/assessments`, data)
+  },
+  list(playerId: string, params?: Record<string, unknown>) {
+    return api.get(`/coach/players/${playerId}/assessments`, { params })
+  },
+  recent() {
+    return api.get('/coach/assessments/recent')
+  },
+  batch(playerIds: string[]) {
+    return api.get('/coach/assessments/batch', { params: { playerIds: playerIds.join(',') } })
+  },
+}
+
+export const pipelineApi = {
+  compute(playerId: string) {
+    return api.post(`/coach/players/${playerId}/compute`)
+  },
+  latest(playerId: string) {
+    return api.get(`/coach/players/${playerId}/snapshot`)
+  },
+  snapshots(playerId: string, params?: Record<string, unknown>) {
+    return api.get(`/coach/players/${playerId}/snapshots`, { params })
+  },
+  debug(playerId: string) {
+    return api.get(`/coach/players/${playerId}/debug`)
+  },
+}
+
+export const biometricsApi = {
+  list(playerId: string) {
+    return api.get(`/coach/players/${playerId}/biometrics`)
+  },
+  create(data: Record<string, unknown>) {
+    return api.post(`/coach/players/${data.playerId}/biometrics`, data)
+  },
+  remove(id: string) {
+    return api.delete(`/coach/biometrics/${id}`)
+  },
+  alerts() {
+    return api.get('/coach/biometrics/alerts')
+  },
+}
+
+export const physicalTestApi = {
+  list(playerId: string) {
+    return api.get(`/coach/players/${playerId}/physical-tests`)
+  },
+  create(data: Record<string, unknown>) {
+    return api.post(`/coach/players/${data.playerId}/physical-tests`, data)
+  },
+  remove(id: string) {
+    return api.delete(`/coach/physical-tests/${id}`)
+  },
+  alerts() {
+    return api.get('/coach/physical-tests/alerts')
+  },
 }
 
 // ── Player API ───────────────────────────────────────────────────────────────
 
 export const playerApi = {
+  // ── Bio-Leap 兼容：球员 CRUD ──
+  list() {
+    return api.get('/coach/players')
+  },
+  create(data: Record<string, unknown>) {
+    return api.post('/coach/players', data)
+  },
+  detail(id: string) {
+    return api.get(`/coach/players/${id}/detail`)
+  },
+  update(id: string, data: Record<string, unknown>) {
+    return api.put(`/coach/players/${id}`, data)
+  },
+  remove(id: string) {
+    return api.delete(`/coach/players/${id}`)
+  },
+  // ── 宠物操作（学员端）──
   getPet(playerId: string) {
     return api.get(`/player/${playerId}/pet`)
   },

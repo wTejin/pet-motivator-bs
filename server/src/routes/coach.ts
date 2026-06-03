@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client'
 import multer from 'multer'
 import path from 'path'
 import { hashPassword, verifyPassword, signToken } from '../services/auth'
-import { refreshPlayerStatsCache } from '../services/stats'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { config, getDefaultPassword } from '../config'
 
@@ -12,7 +11,8 @@ export const coachRouter = Router()
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, '/app/public/avatars')
+    const dir = process.env.UPLOAD_DIR || './public/avatars'
+    cb(null, dir)
   },
   filename: (_req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9)
@@ -57,85 +57,10 @@ coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
     },
   })
 
-  await seedDefaultTemplate(coach.id, now)
+
 
   res.json({ success: true, data: { id: coach.id, phone: coach.phone, name: coach.name } })
 })
-
-async function seedDefaultTemplate(coachId: string, now: number) {
-  const dimensions = [
-    { name: '技术能力', icon: '⚽', indicators: [
-      { name: '传接球稳定性', criteria: '连续5脚以上不失误', defaultPoints: 5, dailyLimit: 20 },
-      { name: '盘带成功率', criteria: '1对1突破成功率', defaultPoints: 5, dailyLimit: 20 },
-      { name: '射门精度', criteria: '射门命中目标区域', defaultPoints: 5, dailyLimit: 20 },
-      { name: '控球能力', criteria: '狭小空间内护球', defaultPoints: 5, dailyLimit: 20 },
-    ]},
-    { name: '战术洞察', icon: '👁️', indicators: [
-      { name: '抬头观察', criteria: '接球前观察场上局势', defaultPoints: 5, dailyLimit: 20 },
-      { name: '关键传球', criteria: '创造得分机会的传球', defaultPoints: 10, dailyLimit: 20 },
-      { name: '跑位意识', criteria: '无球跑动制造空间', defaultPoints: 5, dailyLimit: 20 },
-      { name: '防守预判', criteria: '提前切断传球线路', defaultPoints: 5, dailyLimit: 20 },
-    ]},
-    { name: '身体素质', icon: '💪', indicators: [
-      { name: '冲刺速度', criteria: '30米冲刺表现', defaultPoints: 5, dailyLimit: 20 },
-      { name: '爆发力', criteria: '起步加速能力', defaultPoints: 5, dailyLimit: 20 },
-      { name: '耐力', criteria: '全场持续跑动能力', defaultPoints: 5, dailyLimit: 20 },
-      { name: '柔韧性', criteria: '拉伸和关节活动度', defaultPoints: 5, dailyLimit: 20 },
-    ]},
-    { name: '心理素质', icon: '🧠', indicators: [
-      { name: '抗压能力', criteria: '落后或失误后的表现', defaultPoints: 5, dailyLimit: 20 },
-      { name: '专注力', criteria: '训练中不分心', defaultPoints: 5, dailyLimit: 20 },
-      { name: '自信心', criteria: '敢于做动作和决策', defaultPoints: 5, dailyLimit: 20 },
-      { name: '情绪管理', criteria: '控制情绪不抱怨', defaultPoints: 5, dailyLimit: 20 },
-    ]},
-    { name: '团队协作', icon: '🤝', indicators: [
-      { name: '沟通配合', criteria: '场上语言和非语言沟通', defaultPoints: 5, dailyLimit: 20 },
-      { name: '无私传球', criteria: '为队友创造机会', defaultPoints: 5, dailyLimit: 20 },
-      { name: '补位协防', criteria: '队友失位时及时补位', defaultPoints: 5, dailyLimit: 20 },
-      { name: '鼓励队友', criteria: '积极正面的团队氛围', defaultPoints: 5, dailyLimit: 20 },
-    ]},
-    { name: '比赛态度', icon: '🔥', indicators: [
-      { name: '拼搏精神', criteria: '不放弃每一个球', defaultPoints: 5, dailyLimit: 20 },
-      { name: '遵守纪律', criteria: '服从教练安排', defaultPoints: 5, dailyLimit: 20 },
-      { name: '尊重裁判', criteria: '不对判罚抱怨', defaultPoints: 5, dailyLimit: 20 },
-      { name: '积极热身', criteria: '热身认真不敷衍', defaultPoints: 5, dailyLimit: 20 },
-    ]},
-  ]
-
-  for (let di = 0; di < dimensions.length; di++) {
-    const dim = dimensions[di]
-    const createdDim = await db.scoreDimension.create({
-      data: { coachId, name: dim.name, icon: dim.icon, sortOrder: di },
-    })
-    for (let ii = 0; ii < dim.indicators.length; ii++) {
-      const ind = dim.indicators[ii]
-      await db.scoreIndicator.create({
-        data: {
-          dimensionId: createdDim.id,
-          name: ind.name,
-          criteria: ind.criteria,
-          defaultPoints: ind.defaultPoints,
-          dailyLimit: ind.dailyLimit,
-          sortOrder: ii,
-        },
-      })
-    }
-  }
-
-  const bonusRules = [
-    { name: '全勤奖', points: 50, frequency: 'weekly', criteria: '本周训练全部到场' },
-    { name: '周最佳球员', points: 30, frequency: 'weekly', criteria: '本周综合表现最佳' },
-    { name: '月度进步奖', points: 100, frequency: 'monthly', criteria: '本月进步幅度最大' },
-    { name: '团队贡献奖', points: 50, frequency: 'weekly', criteria: '为团队做出突出贡献' },
-    { name: '拼搏奖', points: 20, frequency: 'weekly', criteria: '训练中表现出顽强拼搏精神' },
-  ]
-
-  for (const rule of bonusRules) {
-    await db.bonusRule.create({
-      data: { coachId, name: rule.name, points: rule.points, frequency: rule.frequency, criteria: rule.criteria },
-    })
-  }
-}
 
 coachRouter.post('/login', async (req: AuthRequest, res: Response) => {
   const { phone, password } = req.body
@@ -241,17 +166,29 @@ coachRouter.get('/players', authenticate, requireRole('coach'), async (req: Auth
 })
 
 coachRouter.post('/players', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const { name, avatar, age } = req.body
+  const { name, avatar, age, birthDate, trainingStartDate, gender, fatherHeightCm, motherHeightCm } = req.body
   const now = Date.now()
   const player = await db.player.create({
-    data: { coachId: coachId(req), name, avatar: avatar || '😊', age: age != null ? Number(age) : null, createdAt: now, updatedAt: now },
+    data: {
+      coachId: coachId(req),
+      name,
+      avatar: avatar || '😊',
+      age: age != null ? Number(age) : null,
+      birthDate: birthDate || null,
+      trainingStartDate: trainingStartDate || null,
+      gender: gender || null,
+      fatherHeightCm: fatherHeightCm != null ? parseFloat(fatherHeightCm) : null,
+      motherHeightCm: motherHeightCm != null ? parseFloat(motherHeightCm) : null,
+      createdAt: now,
+      updatedAt: now,
+    },
   })
   res.json({ success: true, data: player })
 })
 
 coachRouter.put('/players/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
   const id = req.params.id as string
-  const { name, avatar, age, isActive } = req.body
+  const { name, avatar, age, birthDate, trainingStartDate, gender, fatherHeightCm, motherHeightCm, isActive } = req.body
   const player = await db.player.findFirst({ where: { id, coachId: coachId(req) } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
   const updated = await db.player.update({
@@ -260,6 +197,11 @@ coachRouter.put('/players/:id', authenticate, requireRole('coach'), async (req: 
       ...(name !== undefined && { name }),
       ...(avatar !== undefined && { avatar }),
       ...(age !== undefined && { age: age != null ? Number(age) : null }),
+      ...(birthDate !== undefined && { birthDate: birthDate || null }),
+      ...(trainingStartDate !== undefined && { trainingStartDate: trainingStartDate || null }),
+      ...(gender !== undefined && { gender: gender || null }),
+      ...(fatherHeightCm !== undefined && { fatherHeightCm: fatherHeightCm != null ? parseFloat(fatherHeightCm) : null }),
+      ...(motherHeightCm !== undefined && { motherHeightCm: motherHeightCm != null ? parseFloat(motherHeightCm) : null }),
       ...(isActive !== undefined && { isActive }),
       updatedAt: Date.now(),
     },
@@ -267,18 +209,41 @@ coachRouter.put('/players/:id', authenticate, requireRole('coach'), async (req: 
   res.json({ success: true, data: updated })
 })
 
+// ── 球员详情（Bio-Leap 兼容）──
+coachRouter.get('/players/:id/detail', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const player = await db.player.findFirst({ where: { id, coachId: coachId(req) } })
+  if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
+
+  const [pet, snapshot, latestBio] = await Promise.all([
+    db.pet.findUnique({ where: { playerId: id } }),
+    db.pipelineSnapshot.findFirst({ where: { playerId: id }, orderBy: { computedAt: 'desc' } }),
+    db.playerBiometric.findFirst({ where: { playerId: id }, orderBy: { measuredAt: 'desc' } }),
+  ])
+
+  res.json({
+    success: true,
+    data: {
+      player,
+      pet,
+      snapshot: snapshot ? { ...snapshot, computedAt: Number(snapshot.computedAt) } : null,
+      latestBiometric: latestBio ? { ...latestBio, measuredAt: Number(latestBio.measuredAt) } : null,
+    },
+  })
+})
+
 coachRouter.delete('/players/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
   const id = req.params.id as string
   const player = await db.player.findFirst({ where: { id, coachId: coachId(req) } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
-  await db.pet.deleteMany({ where: { playerId: id } })
-  await db.scoreRecord.deleteMany({ where: { playerId: id } })
-  await db.transactionRecord.deleteMany({ where: { playerId: id } })
-  await db.playerInventory.deleteMany({ where: { playerId: id } })
-  await db.playerStatsCache.deleteMany({ where: { playerId: id } })
-  await db.attendance.deleteMany({ where: { playerId: id } })
-  await db.player.delete({ where: { id } })
-  res.json({ success: true, message: '删除成功' })
+
+  // 软删除：保留全部数据供研究分析，仅标记 isActive=false 隐藏
+  await db.player.update({
+    where: { id },
+    data: { isActive: false, updatedAt: Date.now() },
+  })
+
+  res.json({ success: true, message: '已停用（数据已保留）' })
 })
 
 // ---------- 记分 ----------
@@ -289,18 +254,16 @@ coachRouter.post('/scores', authenticate, requireRole('coach'), async (req: Auth
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
 
   if (indicatorId) {
-    const indicator = await db.scoreIndicator.findUnique({ where: { id: indicatorId } })
-    const customIndicator = indicator ? null : await db.customIndicator.findUnique({ where: { id: indicatorId } })
-    const limitSource = indicator || customIndicator
-    if (limitSource) {
+    const customIndicator = await db.customIndicator.findUnique({ where: { id: indicatorId } })
+    if (customIndicator) {
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
       const todayCount = await db.scoreRecord.aggregate({
         where: { playerId, indicatorId, createdAt: { gte: todayStart.getTime() } },
         _sum: { points: true },
       })
       const todayPoints = todayCount._sum.points || 0
-      if (points > 0 && todayPoints + points > limitSource.dailyLimit) {
-        return res.status(400).json({ success: false, error: `今日该指标已达上限 (${todayPoints}/${limitSource.dailyLimit})` })
+      if (points > 0 && todayPoints + points > customIndicator.dailyLimit) {
+        return res.status(400).json({ success: false, error: `今日该指标已达上限 (${todayPoints}/${customIndicator.dailyLimit})` })
       }
     }
   }
@@ -324,9 +287,6 @@ coachRouter.post('/scores', authenticate, requireRole('coach'), async (req: Auth
       })
       return created
     })
-
-    // 异步刷新学员能力数据缓存（不阻塞响应）
-    refreshPlayerStatsCache(playerId, coachId(req)).catch(() => {})
 
     res.json({ success: true, data: record })
   } catch (e) {
@@ -398,10 +358,10 @@ coachRouter.get('/player-stats/:playerId', authenticate, requireRole('coach'), a
   const player = await db.player.findFirst({ where: { id: playerId, coachId: coachId(req) } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
 
-  const dimensions = await db.scoreDimension.findMany({
-    where: { coachId: coachId(req), isActive: true },
-    include: { indicators: { where: { isActive: true } } },
-    orderBy: { sortOrder: 'asc' },
+  // ── 优先使用 Bio-Leap PipelineSnapshot ──
+  const pipelineSnapshot = await db.pipelineSnapshot.findFirst({
+    where: { playerId },
+    orderBy: { computedAt: 'desc' },
   })
 
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
@@ -410,132 +370,81 @@ coachRouter.get('/player-stats/:playerId', authenticate, requireRole('coach'), a
     db.scoreRecord.aggregate({ where: { playerId, type: { in: ['earn', 'penalty'] }, createdAt: { gte: todayStart.getTime() } }, _sum: { points: true } }),
     db.scoreRecord.aggregate({ where: { playerId, type: { in: ['earn', 'penalty'] }, createdAt: { gte: weekStart.getTime() } }, _sum: { points: true } }),
   ])
-
-  // 优先读取预计算缓存
-  let dimStats: any[] = []
-  let overall = 0
-
-  const cache = await db.playerStatsCache.findUnique({ where: { playerId } })
-  if (cache && Number(cache.updatedAt) > Date.now() - 24 * 3600 * 1000) {
-    dimStats = Array.isArray(cache.dimensionJson) ? cache.dimensionJson : []
-    overall = cache.overall
-  } else {
-    const indicatorScores = await db.scoreRecord.groupBy({
-      by: ['indicatorId'],
-      where: { playerId, indicatorId: { not: null }, type: { in: ['earn', 'penalty'] } },
-      _sum: { points: true },
-    })
-    const scoreMap = new Map(indicatorScores.map(s => [s.indicatorId, s._sum.points || 0]))
-
-    dimStats = dimensions.map((dim) => {
-      const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
-      const dimTotal = dim.indicators.reduce((sum, ind) => sum + (scoreMap.get(ind.id) || 0), 0)
-      const indicators = dim.indicators.map(ind => ({
-        indicatorId: ind.id,
-        indicatorName: ind.name,
-        score: scoreMap.get(ind.id) || 0,
-      }))
-      return {
-        dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
-        score: Math.min(99, Math.round((dimTotal / Math.max(1, maxScore)) * 99)), maxScore,
-        indicators,
-      }
-    })
-
-    overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
-
-    // 写入缓存
-    await db.playerStatsCache.upsert({
-      where: { playerId },
-      create: { playerId, overall, dimensionJson: dimStats as any, updatedAt: Date.now() },
-      update: { overall, dimensionJson: dimStats as any, updatedAt: Date.now() },
-    })
-  }
   const allPlayers = await db.player.findMany({
     where: { coachId: coachId(req) }, select: { id: true, currentPoints: true },
     orderBy: { currentPoints: 'desc' },
   })
   const rank = allPlayers.findIndex(p => p.id === playerId) + 1
 
+  if (pipelineSnapshot) {
+    const dimJson = pipelineSnapshot.dimensionJson as Record<string, any>
+    const BIO_LEAP_DIM_META = [
+      { key: 'spatialIq',  name: '空间觉察',  icon: '🧠' },
+      { key: 'techExec',   name: '技术执行',  icon: '⚽' },
+      { key: 'engagement', name: '执行饱和度', icon: '💪' },
+      { key: 'resilience', name: '挫折复原力', icon: '🛡️' },
+      { key: 'altruism',   name: '无私协作性', icon: '🤝' },
+      { key: 'envNoise',   name: '环境抗噪度', icon: '🏠' },
+    ]
+    const dimensions = BIO_LEAP_DIM_META.map(meta => {
+      const dim = dimJson[meta.key] || {}
+      return {
+        dimensionKey: meta.key, dimensionName: meta.name, icon: meta.icon,
+        score: dim.final ?? dim.maturityCorrected ?? 50, maxScore: 99,
+        details: { raw: dim.raw ?? 0, ema: dim.ema ?? 0, expectedScore: dim.expectedScore ?? 0, correctionFactor: dim.correctionFactor ?? 1.0, final: dim.final ?? 50 },
+      }
+    })
+    let age: number | null = null
+    if (player.birthDate) {
+      const birth = new Date(player.birthDate)
+      age = Math.round(((Date.now() - birth.getTime()) / (365.25 * 24 * 3600 * 1000)) * 10) / 10
+    } else if (player.age != null) { age = player.age }
+
+    return res.json({
+      success: true,
+      data: {
+        _version: 'bio-leap',
+        playerId, playerName: player.name, avatar: player.avatar,
+        age, birthDate: player.birthDate, trainingStartDate: player.trainingStartDate, gender: player.gender,
+        overall: pipelineSnapshot.overall,
+        potentialIndex: pipelineSnapshot.potentialIndex,
+        potentialTier: pipelineSnapshot.potentialTier,
+        dimensions,
+        maturityCategory: pipelineSnapshot.maturityCategory,
+        maturityOffset: pipelineSnapshot.maturityOffset,
+        envCategory: pipelineSnapshot.envCategory,
+        hedgingActive: pipelineSnapshot.hedgingActive,
+        totalPoints: player.currentPoints,
+        todayPoints: todayScores._sum?.points || 0, weeklyPoints: weekScores._sum?.points || 0, rank,
+        computedAt: Number(pipelineSnapshot.computedAt),
+      },
+    })
+  }
+
+  // ── 兜底：无管道数据 —— 诊断缺失原因 ──
+  const [hasAssessments, hasBiometric] = await Promise.all([
+    db.dailyAssessment.count({ where: { playerId } }).then(c => c > 0),
+    db.playerBiometric.count({ where: { playerId } }).then(c => c > 0),
+  ])
+  let missingReason = ''
+  if (!hasAssessments && !hasBiometric) {
+    missingReason = '暂无评估记录和身体测量数据，请先录入每日评估和身高体重信息'
+  } else if (!hasAssessments) {
+    missingReason = '暂无评估记录，请先在记分页完成每日评估'
+  } else if (!hasBiometric) {
+    missingReason = '缺少身体测量数据（身高/体重/坐高），请在球员详情页录入后方可生成能力雷达'
+  }
+
   res.json({
     success: true,
     data: {
-      playerId, playerName: player.name, avatar: player.avatar, age: player.age ?? null, overall, dimensions: dimStats,
+      _version: 'legacy',
+      playerId, playerName: player.name, avatar: player.avatar, age: player.age ?? null, overall: 0, dimensions: [],
+      missingReason,
       totalPoints: player.currentPoints,
       todayPoints: todayScores._sum?.points || 0, weeklyPoints: weekScores._sum?.points || 0, rank,
     },
   })
-})
-
-// ---------- 维度 & 指标 CRUD ----------
-
-coachRouter.get('/dimensions', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const dimensions = await db.scoreDimension.findMany({
-    where: { coachId: coachId(req) },
-    include: { indicators: { orderBy: { sortOrder: 'asc' } } },
-    orderBy: { sortOrder: 'asc' },
-  })
-  res.json({ success: true, data: dimensions })
-})
-
-coachRouter.post('/dimensions', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const { name, icon, sortOrder } = req.body
-  const dim = await db.scoreDimension.create({
-    data: { coachId: coachId(req), name, icon: icon || '⭐', sortOrder: sortOrder || 0 },
-  })
-  res.json({ success: true, data: dim })
-})
-
-coachRouter.put('/dimensions/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  const { name, icon, sortOrder, isActive } = req.body
-  const dim = await db.scoreDimension.findFirst({ where: { id, coachId: coachId(req) } })
-  if (!dim) return res.status(404).json({ success: false, error: '维度不存在' })
-  const updated = await db.scoreDimension.update({
-    where: { id },
-    data: {
-      ...(name && { name }), ...(icon && { icon }),
-      ...(sortOrder !== undefined && { sortOrder }), ...(isActive !== undefined && { isActive }),
-    },
-  })
-  res.json({ success: true, data: updated })
-})
-
-coachRouter.delete('/dimensions/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  await db.scoreIndicator.deleteMany({ where: { dimensionId: id } })
-  await db.scoreDimension.deleteMany({ where: { id, coachId: coachId(req) } })
-  res.json({ success: true, message: '删除成功' })
-})
-
-coachRouter.post('/indicators', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const { dimensionId, name, criteria, defaultPoints, dailyLimit, sortOrder } = req.body
-  const dim = await db.scoreDimension.findFirst({ where: { id: dimensionId, coachId: coachId(req) } })
-  if (!dim) return res.status(404).json({ success: false, error: '维度不存在' })
-  const indicator = await db.scoreIndicator.create({
-    data: { dimensionId, name, criteria: criteria || '', defaultPoints: defaultPoints || 5, dailyLimit: dailyLimit || 20, sortOrder: sortOrder || 0 },
-  })
-  res.json({ success: true, data: indicator })
-})
-
-coachRouter.put('/indicators/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  const { name, criteria, defaultPoints, dailyLimit, isActive, sortOrder } = req.body
-  const updated = await db.scoreIndicator.update({
-    where: { id },
-    data: {
-      ...(name && { name }), ...(criteria !== undefined && { criteria }),
-      ...(defaultPoints !== undefined && { defaultPoints }), ...(dailyLimit !== undefined && { dailyLimit }),
-      ...(isActive !== undefined && { isActive }), ...(sortOrder !== undefined && { sortOrder }),
-    },
-  })
-  res.json({ success: true, data: updated })
-})
-
-coachRouter.delete('/indicators/:id', authenticate, requireRole('coach'), async (_req: AuthRequest, res: Response) => {
-  const id = _req.params.id as string
-  await db.scoreIndicator.deleteMany({ where: { id } })
-  res.json({ success: true, message: '删除成功' })
 })
 
 // ---------- 自定义指标 ----------
@@ -587,25 +496,6 @@ coachRouter.delete('/custom-indicators/:id', authenticate, requireRole('coach'),
   res.json({ success: true, message: '删除成功' })
 })
 
-// ---------- 奖励规则 ----------
-
-coachRouter.get('/bonus-rules', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const rules = await db.bonusRule.findMany({ where: { coachId: coachId(req) } })
-  res.json({ success: true, data: rules })
-})
-
-coachRouter.put('/bonus-rules/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  const { name, points, frequency, criteria, isActive } = req.body
-  const updateData: any = {}
-  if (name) updateData.name = name
-  if (points !== undefined) updateData.points = points
-  if (frequency) updateData.frequency = frequency
-  if (criteria) updateData.criteria = criteria
-  if (isActive !== undefined) updateData.isActive = isActive
-  const updated = await db.bonusRule.update({ where: { id }, data: updateData })
-  res.json({ success: true, data: updated })
-})
 
 // ---------- 模式开关 ----------
 
@@ -642,74 +532,6 @@ coachRouter.post('/import', authenticate, requireRole('coach'), async (req: Auth
   if (!type || !data) return res.status(400).json({ success: false, error: 'type 和 data 必填' })
   await db.customData.create({ data: { coachId: coachId(req), type, data, importedAt: Date.now() } })
   res.json({ success: true, message: '导入成功' })
-})
-
-// ---------- 训练课次 ----------
-
-coachRouter.get('/sessions', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const sessions = await db.session.findMany({
-    where: { coachId: coachId(req) },
-    orderBy: { date: 'desc' },
-    include: { attendances: { include: { player: { select: { id: true, name: true, avatar: true } } } } },
-  })
-  res.json({ success: true, data: sessions.map(s => ({ ...s, date: Number(s.date), createdAt: Number(s.createdAt) })) })
-})
-
-coachRouter.post('/sessions', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const { name, date } = req.body
-  if (!name || !date) return res.status(400).json({ success: false, error: '名称和日期必填' })
-  const session = await db.session.create({
-    data: { coachId: coachId(req), name, date: Number(date), createdAt: Date.now() },
-  })
-  res.json({ success: true, data: { ...session, date: Number(session.date) } })
-})
-
-coachRouter.put('/sessions/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  const { name, date, status } = req.body
-  const existing = await db.session.findFirst({ where: { id, coachId: coachId(req) } })
-  if (!existing) return res.status(404).json({ success: false, error: '课次不存在' })
-  const updated = await db.session.update({
-    where: { id },
-    data: {
-      ...(name && { name }),
-      ...(date && { date: Number(date) }),
-      ...(status && { status }),
-    },
-  })
-  res.json({ success: true, data: { ...updated, date: Number(updated.date) } })
-})
-
-coachRouter.delete('/sessions/:id', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const id = req.params.id as string
-  const existing = await db.session.findFirst({ where: { id, coachId: coachId(req) } })
-  if (!existing) return res.status(404).json({ success: false, error: '课次不存在' })
-  await db.attendance.deleteMany({ where: { sessionId: id } })
-  await db.session.delete({ where: { id } })
-  res.json({ success: true, message: '删除成功' })
-})
-
-// ---------- 出勤记录 ----------
-
-coachRouter.post('/attendance', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
-  const { sessionId, records } = req.body
-  if (!sessionId || !Array.isArray(records)) {
-    return res.status(400).json({ success: false, error: 'sessionId 和 records 必填' })
-  }
-  const session = await db.session.findFirst({ where: { id: sessionId, coachId: coachId(req) } })
-  if (!session) return res.status(404).json({ success: false, error: '课次不存在' })
-
-  const now = Date.now()
-  await db.attendance.deleteMany({ where: { sessionId } })
-  await db.attendance.createMany({
-    data: records.map((r: any) => ({
-      sessionId,
-      playerId: r.playerId,
-      status: r.status || 'present',
-      createdAt: now,
-    })),
-  })
-  res.json({ success: true, message: '出勤记录已保存' })
 })
 
 // ---------- 头像上传 ----------

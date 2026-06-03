@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client'
 import multer from 'multer'
 import path from 'path'
 import { AuthRequest } from '../middleware/auth'
-import { refreshPlayerStatsCache } from '../services/stats'
 
 const db = new PrismaClient()
 export const playerRouter = Router()
@@ -11,7 +10,7 @@ export const publicRouter = Router()
 
 // ── 头像上传配置 ──
 const avatarStorage = multer.diskStorage({
-  destination: '/app/public/avatars',
+  destination: process.env.UPLOAD_DIR || './public/avatars',
   filename(_req, file, cb) {
     const ext = path.extname(file.originalname) || '.png'
     cb(null, `avatar-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`)
@@ -204,33 +203,18 @@ publicRouter.get('/public/coach/:phone', async (req, res) => {
   })
 })
 
-publicRouter.get('/public/dimensions/:phone', async (req, res) => {
-  const phone = req.params.phone as string
-  const coach = await db.coach.findUnique({ where: { phone } })
-  if (!coach) return res.status(404).json({ success: false, error: '教练不存在' })
-
-  const dimensions = await db.scoreDimension.findMany({
-    where: { coachId: coach.id, isActive: true },
-    include: { indicators: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } },
-    orderBy: { sortOrder: 'asc' },
-  })
-
+publicRouter.get('/public/dimensions/:phone', async (_req, res) => {
+  // Bio-Leap 固定6维度
   res.json({
     success: true,
-    data: dimensions.map(d => ({
-      id: d.id,
-      name: d.name,
-      icon: d.icon,
-      sortOrder: d.sortOrder,
-      indicators: d.indicators.map(i => ({
-        id: i.id,
-        name: i.name,
-        criteria: i.criteria,
-        defaultPoints: i.defaultPoints,
-        dailyLimit: i.dailyLimit,
-        sortOrder: i.sortOrder,
-      })),
-    })),
+    data: [
+      { id: 'spatialIq', name: '空间觉察', icon: '🧠', sortOrder: 1, indicators: [] },
+      { id: 'techExec', name: '技术执行', icon: '⚽', sortOrder: 2, indicators: [] },
+      { id: 'engagement', name: '执行饱和度', icon: '💪', sortOrder: 3, indicators: [] },
+      { id: 'resilience', name: '挫折复原力', icon: '🛡️', sortOrder: 4, indicators: [] },
+      { id: 'altruism', name: '无私协作性', icon: '🤝', sortOrder: 5, indicators: [] },
+      { id: 'envNoise', name: '环境抗噪度', icon: '🏠', sortOrder: 6, indicators: [] },
+    ],
   })
 })
 
@@ -244,55 +228,13 @@ publicRouter.get('/public/player-stats/:phone/:playerId', async (req, res) => {
   const player = await db.player.findFirst({ where: { id: playerId, coachId: coach.id } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
 
-  // 优先读取预计算缓存
-  let dimStats: any[] = []
-  let overall = 0
+  // ── 优先使用 Bio-Leap PipelineSnapshot ──
+  const pipelineSnapshot = await db.pipelineSnapshot.findFirst({
+    where: { playerId },
+    orderBy: { computedAt: 'desc' },
+  })
 
-  const cache = await db.playerStatsCache.findUnique({ where: { playerId } })
-  if (cache && Number(cache.updatedAt) > Date.now() - 24 * 3600 * 1000) {
-    // 缓存存在且24小时内有效
-    dimStats = Array.isArray(cache.dimensionJson) ? cache.dimensionJson : []
-    overall = cache.overall
-  } else {
-    // 缓存不存在或过期，重新计算并写入
-    const dimensions = await db.scoreDimension.findMany({
-      where: { coachId: coach.id, isActive: true },
-      include: { indicators: { where: { isActive: true } } },
-      orderBy: { sortOrder: 'asc' },
-    })
-
-    const indicatorScores = await db.scoreRecord.groupBy({
-      by: ['indicatorId'],
-      where: { playerId, indicatorId: { not: null }, type: { in: ['earn', 'penalty'] } },
-      _sum: { points: true },
-    })
-    const scoreMap = new Map(indicatorScores.map(s => [s.indicatorId, s._sum.points || 0]))
-
-    dimStats = dimensions.map((dim) => {
-      const maxScore = dim.indicators.reduce((sum, i) => sum + i.dailyLimit * 7, 0)
-      const dimTotal = dim.indicators.reduce((sum, ind) => sum + (scoreMap.get(ind.id) || 0), 0)
-      const indicators = dim.indicators.map(ind => ({
-        indicatorId: ind.id,
-        indicatorName: ind.name,
-        score: scoreMap.get(ind.id) || 0,
-      }))
-      return {
-        dimensionId: dim.id, dimensionName: dim.name, icon: dim.icon,
-        score: Math.min(99, Math.round((dimTotal / Math.max(1, maxScore)) * 99)), maxScore,
-        indicators,
-      }
-    })
-
-    overall = dimStats.length > 0 ? Math.round(dimStats.reduce((s, d) => s + d.score, 0) / dimStats.length) : 0
-
-    // 写入缓存
-    await db.playerStatsCache.upsert({
-      where: { playerId },
-      create: { playerId, overall, dimensionJson: dimStats as any, updatedAt: Date.now() },
-      update: { overall, dimensionJson: dimStats as any, updatedAt: Date.now() },
-    })
-  }
-
+  // 通用聚合数据
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0, 0, 0, 0)
   const [todayScores, weekScores] = await Promise.all([
@@ -305,10 +247,87 @@ publicRouter.get('/public/player-stats/:phone/:playerId', async (req, res) => {
   })
   const rank = allPlayers.findIndex(p => p.id === playerId) + 1
 
+  if (pipelineSnapshot) {
+    // Bio-Leap 模式：返回6维度 + PI + 成熟度
+    const dimJson = pipelineSnapshot.dimensionJson as Record<string, any>
+    const BIO_LEAP_DIM_META = [
+      { key: 'spatialIq',  name: '空间觉察',  icon: '🧠' },
+      { key: 'techExec',   name: '技术执行',  icon: '⚽' },
+      { key: 'engagement', name: '执行饱和度', icon: '💪' },
+      { key: 'resilience', name: '挫折复原力', icon: '🛡️' },
+      { key: 'altruism',   name: '无私协作性', icon: '🤝' },
+      { key: 'envNoise',   name: '环境抗噪度', icon: '🏠' },
+    ]
+    const dimensions = BIO_LEAP_DIM_META.map(meta => {
+      const dim = dimJson[meta.key] || {}
+      return {
+        dimensionKey: meta.key,
+        dimensionName: meta.name,
+        icon: meta.icon,
+        score: dim.final ?? dim.maturityCorrected ?? 50,
+        maxScore: 99,
+        details: {
+          raw: dim.raw ?? 0,
+          ema: dim.ema ?? 0,
+          expectedScore: dim.expectedScore ?? 0,
+          correctionFactor: dim.correctionFactor ?? 1.0,
+          final: dim.final ?? 50,
+        },
+      }
+    })
+
+    // 计算年龄
+    let age: number | null = null
+    if (player.birthDate) {
+      const birth = new Date(player.birthDate)
+      age = Math.round(((Date.now() - birth.getTime()) / (365.25 * 24 * 3600 * 1000)) * 10) / 10
+    } else if (player.age != null) {
+      age = player.age
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        _version: 'bio-leap',
+        playerId, playerName: player.name, avatar: player.avatar,
+        age, birthDate: player.birthDate, trainingStartDate: player.trainingStartDate, gender: player.gender,
+        overall: pipelineSnapshot.overall,
+        potentialIndex: pipelineSnapshot.potentialIndex,
+        potentialTier: pipelineSnapshot.potentialTier,
+        dimensions,
+        maturityCategory: pipelineSnapshot.maturityCategory,
+        maturityOffset: pipelineSnapshot.maturityOffset,
+        envCategory: pipelineSnapshot.envCategory,
+        hedgingActive: pipelineSnapshot.hedgingActive,
+        totalPoints: player.currentPoints,
+        todayPoints: todayScores._sum?.points || 0,
+        weeklyPoints: weekScores._sum?.points || 0,
+        rank,
+        computedAt: Number(pipelineSnapshot.computedAt),
+      },
+    })
+  }
+
+  // ── 兜底：无管道数据 —— 诊断缺失原因 ──
+  const [hasAssessments, hasBiometric] = await Promise.all([
+    db.dailyAssessment.count({ where: { playerId } }).then(c => c > 0),
+    db.playerBiometric.count({ where: { playerId } }).then(c => c > 0),
+  ])
+  let missingReason = ''
+  if (!hasAssessments && !hasBiometric) {
+    missingReason = '暂无评估记录和身体测量数据，等待教练录入'
+  } else if (!hasAssessments) {
+    missingReason = '暂无评估记录，等待教练完成每日评估'
+  } else if (!hasBiometric) {
+    missingReason = '缺少身体测量数据，能力雷达将在教练录入身高/体重/坐高后生成'
+  }
+
   res.json({
     success: true,
     data: {
-      playerId, playerName: player.name, avatar: player.avatar, overall, dimensions: dimStats,
+      _version: 'legacy',
+      playerId, playerName: player.name, avatar: player.avatar, age: player.age ?? null, overall: 0, dimensions: [],
+      missingReason,
       totalPoints: player.currentPoints,
       todayPoints: todayScores._sum?.points || 0, weeklyPoints: weekScores._sum?.points || 0, rank,
     },
@@ -1203,16 +1222,16 @@ publicRouter.post('/public/player/:playerId/checkin', async (req, res) => {
 async function calculateStreakBonus(playerId: string, coachId: string, now: number) {
   const bonusEvents: { days: number; points: number; label: string }[] = []
 
-  // 基于出勤记录（Attendance status='present'）计算连续活跃天数
-  const attendances = await db.attendance.findMany({
-    where: { playerId, status: 'present' },
+  // 基于签到记录计算连续活跃天数
+  const checkins = await db.scoreRecord.findMany({
+    where: { playerId, type: 'bonus', reason: '每日签到' },
     orderBy: { createdAt: 'desc' },
     select: { createdAt: true },
   })
 
   const activeDays = new Set<string>()
-  for (const a of attendances) {
-    const d = new Date(Number(a.createdAt))
+  for (const c of checkins) {
+    const d = new Date(Number(c.createdAt))
     d.setHours(0, 0, 0, 0)
     activeDays.add(d.getTime().toString())
   }

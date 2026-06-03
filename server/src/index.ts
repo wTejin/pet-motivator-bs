@@ -9,6 +9,10 @@ import { errorHandler } from './middleware/errorHandler'
 import { adminRouter } from './routes/admin'
 import { coachRouter } from './routes/coach'
 import { playerRouter, publicRouter } from './routes/player'
+import { biometricsRouter } from './routes/biometrics'
+import { assessmentRouter } from './routes/assessment'
+import { physicalTestRouter } from './routes/physicalTest'
+import { pipelineRouter } from './routes/pipeline'
 
 const app = express()
 
@@ -16,13 +20,18 @@ app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 
 // Static files for uploaded avatars, team logos and pet images
-app.use('/avatars', express.static('/app/public/avatars'))
+const uploadDir = process.env.UPLOAD_DIR || './public'
+app.use('/avatars', express.static(`${uploadDir}/avatars`))
 // Logos served directly by nginx from client/dist/logos/
-app.use('/images', express.static('/app/public/images'))
+app.use('/images', express.static(`${uploadDir}/images`))
 
 app.use('/api', publicRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/coach', coachRouter)
+app.use('/api/coach', biometricsRouter)
+app.use('/api/coach', assessmentRouter)
+app.use('/api/coach', physicalTestRouter)
+app.use('/api/coach', pipelineRouter)
 app.use('/api/player', playerRouter)
 
 app.get('/api/health', (_req, res) => {

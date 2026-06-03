@@ -1,0 +1,313 @@
+{
+  "generatedAt": "2026-06-03T02:13:08.921Z",
+  "summary": {
+    "errors": 0,
+    "warnings": 23
+  },
+  "players": [
+    {
+      "name": "王大早",
+      "devType": "early",
+      "overall": 61,
+      "potentialTier": "insufficient_data",
+      "pet": {
+        "stage": "rare",
+        "level": 5,
+        "carePoints": 1000
+      },
+      "points": 558
+    },
+    {
+      "name": "赵二早",
+      "devType": "early",
+      "overall": 85,
+      "potentialTier": "insufficient_data",
+      "pet": {
+        "stage": "rare",
+        "level": 5,
+        "carePoints": 1000
+      },
+      "points": 1178
+    },
+    {
+      "name": "李三晚",
+      "devType": "late",
+      "overall": 62,
+      "potentialTier": "insufficient_data",
+      "pet": {
+        "stage": "rare",
+        "level": 5,
+        "carePoints": 1000
+      },
+      "points": 567
+    },
+    {
+      "name": "陈四晚",
+      "devType": "late",
+      "overall": 77,
+      "potentialTier": "insufficient_data",
+      "pet": {
+        "stage": "rare",
+        "level": 5,
+        "carePoints": 1000
+      },
+      "points": 879
+    },
+    {
+      "name": "张五正",
+      "devType": "normal",
+      "overall": 61,
+      "potentialTier": "insufficient_data",
+      "pet": {
+        "stage": "rare",
+        "level": 5,
+        "carePoints": 1000
+      },
+      "points": 542
+    },
+    {
+      "name": "杨六正",
+      "devType": "normal",
+      "overall": 81,
+      "potentialTier": "insufficient_data",
+      "pet": {
+        "stage": "rare",
+        "level": 5,
+        "carePoints": 1000
+      },
+      "points": 945
+    }
+  ],
+  "anomalies": [
+    {
+      "phase": 1,
+      "day": 0,
+      "severity": "warn",
+      "message": "王大早 修正方向异常: S:+17 T:-7 E:+15, expected 扣分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 1,
+      "day": 0,
+      "severity": "warn",
+      "message": "陈四晚 修正方向异常: S:-13 T:+3 E:-3, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 1,
+      "day": 0,
+      "severity": "warn",
+      "message": "张五正 修正方向异常: S:+19 T:-2 E:+23, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 1,
+      "day": 0,
+      "severity": "warn",
+      "message": "杨六正 修正方向异常: S:-14 T:+2 E:-6, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 2,
+      "day": 0,
+      "severity": "warn",
+      "message": "王大早 修正方向异常: S:+12 T:-3 E:+14, expected 扣分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 2,
+      "day": 0,
+      "severity": "warn",
+      "message": "陈四晚 修正方向异常: S:-10 T:+8 E:-6, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 2,
+      "day": 0,
+      "severity": "warn",
+      "message": "张五正 修正方向异常: S:+16 T:+3 E:+23, expected 加分方向",
+      "detail": {
+        "correctCount": 0,
+        "ratio": 0
+      }
+    },
+    {
+      "phase": 2,
+      "day": 0,
+      "severity": "warn",
+      "message": "杨六正 修正方向异常: S:-10 T:+5 E:-2, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 3,
+      "day": 0,
+      "severity": "warn",
+      "message": "王大早 修正方向异常: S:+12 T:-4 E:+12, expected 扣分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 3,
+      "day": 0,
+      "severity": "warn",
+      "message": "陈四晚 修正方向异常: S:-8 T:+4 E:-2, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 3,
+      "day": 0,
+      "severity": "warn",
+      "message": "张五正 修正方向异常: S:+12 T:+3 E:+19, expected 加分方向",
+      "detail": {
+        "correctCount": 0,
+        "ratio": 0
+      }
+    },
+    {
+      "phase": 3,
+      "day": 0,
+      "severity": "warn",
+      "message": "杨六正 修正方向异常: S:-12 T:0 E:-6, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 4,
+      "day": 0,
+      "severity": "warn",
+      "message": "王大早 修正方向异常: S:+8 T:-1 E:+14, expected 扣分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 4,
+      "day": 0,
+      "severity": "warn",
+      "message": "陈四晚 修正方向异常: S:-11 T:+7 E:-2, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 4,
+      "day": 0,
+      "severity": "warn",
+      "message": "张五正 修正方向异常: S:+10 T:+3 E:+19, expected 加分方向",
+      "detail": {
+        "correctCount": 0,
+        "ratio": 0
+      }
+    },
+    {
+      "phase": 4,
+      "day": 0,
+      "severity": "warn",
+      "message": "杨六正 修正方向异常: S:-10 T:+2 E:-4, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 5,
+      "day": 0,
+      "severity": "warn",
+      "message": "王大早 修正方向异常: S:+12 T:0 E:+21, expected 扣分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 5,
+      "day": 0,
+      "severity": "warn",
+      "message": "张五正 修正方向异常: S:+15 T:+2 E:+20, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 5,
+      "day": 0,
+      "severity": "warn",
+      "message": "杨六正 修正方向异常: S:-9 T:+5 E:+1, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 6,
+      "day": 0,
+      "severity": "warn",
+      "message": "王大早 修正方向异常: S:+14 T:-1 E:+16, expected 扣分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 6,
+      "day": 0,
+      "severity": "warn",
+      "message": "陈四晚 修正方向异常: S:-10 T:+9 E:-4, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    },
+    {
+      "phase": 6,
+      "day": 0,
+      "severity": "warn",
+      "message": "张五正 修正方向异常: S:+13 T:+4 E:+19, expected 加分方向",
+      "detail": {
+        "correctCount": 0,
+        "ratio": 0
+      }
+    },
+    {
+      "phase": 6,
+      "day": 0,
+      "severity": "warn",
+      "message": "杨六正 修正方向异常: S:-9 T:0 E:-3, expected 加分方向",
+      "detail": {
+        "correctCount": 1,
+        "ratio": 0.3333333333333333
+      }
+    }
+  ]
+}

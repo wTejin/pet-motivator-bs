@@ -2,11 +2,11 @@
   "name": "pet-motivator-bs-server",
   "version": "1.0.0",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "bun --watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/src/index.js",
+    "start": "bun run dist/src/index.js",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "bun run prisma/seed.ts",
     "db:generate": "prisma generate"
   },
   "dependencies": {

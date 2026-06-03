@@ -101,18 +101,19 @@
             </div>
           </div>
 
-          <!-- PC/平板：FIFA 球员卡置于左侧宠物卡下方 -->
-          <FifaPlayerCard
-            v-if="playerStats"
-            :stats="playerStats"
-            theme="light"
+          <!-- PC/平板：球员能力卡置于左侧宠物卡下方 -->
+          <BioLeapPlayerCard
+            v-if="bioLeapPlayer"
+            :player="bioLeapPlayer"
+            :snapshot="bioLeapSnapshot"
+            :age="playerStats?.age ?? null"
+            :potentialIndex="(playerStats as any)?.potentialIndex ?? null"
+            :potentialTier="(playerStats as any)?.potentialTier ?? null"
             class="fifa-desktop"
-            :editable="!isDisplayMode"
-            :upload-fn="handleAvatarUpload"
-            @update:avatar="handleAvatarChange"
           />
           <div v-else class="card-placeholder fifa-desktop">
-            <p>暂无能力数据</p>
+            <p class="placeholder-title">暂无能力数据</p>
+            <p v-if="missingReason" class="placeholder-hint">{{ missingReason }}</p>
           </div>
         </section>
 
@@ -213,18 +214,20 @@
             👀 返回全班大屏 <span class="link-arrow">&gt;</span>
           </router-link>
 
-          <!-- 手机端：FIFA 球员卡置于页面最底部 -->
-          <FifaPlayerCard
-            v-if="playerStats"
-            :stats="playerStats"
-            theme="light"
+          <!-- 手机端：球员能力卡置于页面最底部 -->
+          <BioLeapPlayerCard
+            v-if="bioLeapPlayer"
+            :player="bioLeapPlayer"
+            :snapshot="bioLeapSnapshot"
+            :age="playerStats?.age ?? null"
+            :potentialIndex="(playerStats as any)?.potentialIndex ?? null"
+            :potentialTier="(playerStats as any)?.potentialTier ?? null"
             class="fifa-mobile"
-            :editable="!isDisplayMode"
-            :upload-fn="handleAvatarUpload"
-            @update:avatar="handleAvatarChange"
+            style="margin-top:12px"
           />
           <div v-else class="card-placeholder fifa-mobile" style="margin-top:12px">
-            <p>暂无能力数据</p>
+            <p class="placeholder-title">暂无能力数据</p>
+            <p v-if="missingReason" class="placeholder-hint">{{ missingReason }}</p>
           </div>
         </section>
       </div>
@@ -318,7 +321,7 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
 import api from '@/api'
-import FifaPlayerCard from '@/components/FifaPlayerCard.vue'
+import BioLeapPlayerCard from '@/components/BioLeapPlayerCard.vue'
 import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
 import type { PlayerStats } from '@shared/types'
 
@@ -381,6 +384,7 @@ interface ScoreRecord {
 
 const pet = ref<PetData | null>(null)
 const playerStats = ref<PlayerStats | null>(null)
+const missingReason = ref('')
 const currentPoints = ref(0)
 const inventory = ref<InventoryItem[]>([])
 const shopItems = ref<ShopItemDef[]>([])
@@ -431,6 +435,66 @@ const shopLink = computed(() => {
   return c ? `/player/${playerId}/shop?c=${c}` : `/player/${playerId}/shop`
 })
 
+const bioLeapPlayer = computed(() => {
+  const s = playerStats.value as any
+  if (!s) return null
+  return {
+    id: s.playerId,
+    name: s.playerName,
+    avatar: s.avatar,
+    birthDate: s.birthDate ?? null,
+    trainingStartDate: s.trainingStartDate ?? null,
+    gender: s.gender ?? null,
+  }
+})
+
+const bioLeapSnapshot = computed(() => {
+  const s = playerStats.value as any
+  if (!s) return null
+  // Bio-Leap 格式
+  if (s._version === 'bio-leap') {
+    return {
+      id: '', playerId: s.playerId,
+      overall: s.overall,
+      potentialIndex: s.potentialIndex,
+      potentialTier: s.potentialTier,
+      dimensionJson: Object.fromEntries(
+        (s.dimensions || []).map((d: any) => [d.dimensionKey, d.details || { final: d.score, raw: 0, ema: 0, expectedScore: 0, correctionFactor: 1.0, maturityCorrected: d.score }])
+      ),
+      maturityOffset: s.maturityOffset ?? 0,
+      maturityCategory: s.maturityCategory || 'on_time',
+      envCategory: s.envCategory || 'normal',
+      envNoiseEma30d: 0,
+      hedgingActive: s.hedgingActive ?? false,
+      hedgingMultiplier: 1.0,
+      computedAt: s.computedAt ?? Date.now(),
+    }
+  }
+  // 旧格式 — 把 legacy dimensions 转为 bio-leap dimensions
+  const DIM_KEY_MAP: Record<string, string> = {
+    '技术': 'techExec', '洞察': 'spatialIq', '身体': 'engagement',
+    '心理': 'resilience', '协作': 'altruism', '态度': 'envNoise',
+  }
+  const dimJson: Record<string, any> = {}
+  for (const d of (s.dimensions || [])) {
+    const blKey = DIM_KEY_MAP[d.dimensionName] || d.dimensionId
+    dimJson[blKey] = { final: d.score || 0, raw: 0, ema: 0, expectedScore: 0, correctionFactor: 1.0, maturityCorrected: d.score || 0 }
+  }
+  return {
+    id: '', playerId: s.playerId,
+    overall: s.overall ?? 0,
+    potentialIndex: null,
+    potentialTier: null,
+    dimensionJson: dimJson,
+    maturityOffset: 0,
+    maturityCategory: 'on_time',
+    envCategory: 'normal',
+    envNoiseEma30d: 50,
+    hedgingActive: false,
+    hedgingMultiplier: 1.0,
+    computedAt: Date.now(),
+  }
+})
 const isPetWeak = computed(() => pet.value?.status?.includes('weak') ?? false)
 const isPetSad = computed(() => pet.value?.status?.includes('sad') ?? false)
 const petStatusText = computed(() => {
@@ -543,6 +607,7 @@ async function loadData() {
         name: i.name,
         emoji: i.emoji || (i.type === 'food' ? '🍎' : i.type === 'decoration' ? '🎩' : '✨'),
         type: i.type,
+        usageType: (i as any).usageType || i.type,
       }))
     }
 
@@ -558,6 +623,9 @@ async function loadData() {
         ])
         if (statsRes?.data?.success) {
           playerStats.value = statsRes.data.data
+          missingReason.value = (statsRes.data.data as any)?.missingReason || ''
+        } else {
+          missingReason.value = ''
         }
         if (modeRes?.data?.success) {
           isDisplayMode.value = modeRes.data.data?.playerMode === 'display'
@@ -586,7 +654,7 @@ function getItemType(itemId: string): string {
 }
 
 function getItemUsageType(itemId: string): string {
-  const item = shopItems.value.find(i => i.id === itemId)
+  const item = shopItems.value.find((i: any) => i.id === itemId)
   return (item as any)?.usageType || item?.type || ''
 }
 
@@ -671,6 +739,7 @@ async function handleUseItem(inv: InventoryItem) {
         emoji: i.emoji || '📦',
         type: i.type,
         price: i.price,
+        usageType: (i as any).usageType || i.type,
       }))
     }
   } catch (e: any) {
@@ -1021,6 +1090,21 @@ onUnmounted(() => {
   text-align: center;
   color: #999;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-placeholder .placeholder-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #888;
+}
+
+.card-placeholder .placeholder-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.6;
+  max-width: 320px;
+  margin-inline: auto;
 }
 
 /* FIFA 卡响应式：PC/平板显示左侧版本，手机端显示右侧底部版本 */
@@ -1507,7 +1591,8 @@ onUnmounted(() => {
   .left-section,
   .right-section {
     flex: 1 1 auto;
-    width: 80%;
+    width: 90%;
+    max-width: 640px;
     margin: 0 auto;
   }
 }
@@ -1520,12 +1605,16 @@ onUnmounted(() => {
   .left-section,
   .right-section {
     width: 100%;
+    max-width: 100%;
   }
   .page-title {
     font-size: 18px;
   }
   .market-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .species-selection-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   /* FIFA 卡：手机端隐藏左侧版本，显示右侧底部版本 */
@@ -1537,7 +1626,83 @@ onUnmounted(() => {
   }
 }
 
-/* Display mode warning */
+/* ===== Responsive: 智慧大屏 (≥1401px) 教室触屏 / 投影 ===== */
+@media (min-width: 1401px) {
+  .main-content {
+    max-width: 1600px;
+    gap: 24px;
+  }
+  .dashboard-page {
+    padding: 32px;
+  }
+  .page-title {
+    font-size: 28px;
+  }
+  .back-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+
+  /* 保留左右分栏但放大内容 */
+  .dashboard-body {
+    gap: 28px;
+  }
+  .left-section {
+    flex: 0 0 52%;
+  }
+  .right-section {
+    flex: 0 0 48%;
+  }
+
+  .pet-panel,
+  .action-panel,
+  .records-panel,
+  .market-panel {
+    padding: 28px;
+    border-radius: 20px;
+  }
+  .action-btn {
+    padding: 18px 20px;
+    font-size: 16px;
+  }
+  .btn-icon {
+    font-size: 28px;
+  }
+  .points-value {
+    font-size: 36px;
+  }
+  .points-label {
+    font-size: 16px;
+  }
+  .checkin-btn {
+    font-size: 16px;
+    padding: 14px 20px;
+  }
+  .market-title,
+  .records-title {
+    font-size: 17px;
+  }
+  .record-item {
+    font-size: 15px;
+    padding: 10px 14px;
+  }
+  .link-row {
+    font-size: 16px;
+    padding: 16px 20px;
+  }
+  .market-item {
+    padding: 14px 8px;
+  }
+  .item-emoji {
+    font-size: 36px;
+  }
+  .item-name {
+    font-size: 12px;
+  }
+}
+
+/* ===== Display mode warning ===== */
 .display-warning {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.2);
@@ -1876,37 +2041,4 @@ onUnmounted(() => {
   color: #b8860b;
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 1024px) {
-  .dashboard-body {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .left-section,
-  .right-section {
-    flex: 1 1 auto;
-    width: 80%;
-    margin: 0 auto;
-  }
-}
-
-/* ===== Responsive: Mobile ===== */
-@media (max-width: 768px) {
-  .dashboard-page {
-    padding: 12px;
-  }
-  .left-section,
-  .right-section {
-    width: 100%;
-  }
-  .page-title {
-    font-size: 18px;
-  }
-  .market-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .species-selection-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 </style>
