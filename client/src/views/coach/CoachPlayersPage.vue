@@ -28,34 +28,40 @@
               <option value="male">♂️ 男</option>
               <option value="female">♀️ 女</option>
             </select>
-            <input
-              v-model="playerForm.birthDate"
-              type="date"
-              class="inline-input date-input"
-              title="出生日期（Bio-Leap 必需）"
-            />
+            <span class="date-label-wrap">
+              <span class="date-label">出生</span>
+              <input
+                v-model="playerForm.birthDate"
+                type="date"
+                class="inline-input date-input"
+                title="出生日期"
+              />
+            </span>
             <input
               v-model.number="playerForm.fatherHeightCm"
               type="number"
               step="0.1"
-              placeholder="父身高"
+              placeholder="父身高 cm"
               class="inline-input parent-h-input"
-              title="父亲身高 cm（Khamis-Roche 遗传预测用）"
+              title="父亲身高（Khamis-Roche 遗传预测用）"
             />
             <input
               v-model.number="playerForm.motherHeightCm"
               type="number"
               step="0.1"
-              placeholder="母身高"
+              placeholder="母身高 cm"
               class="inline-input parent-h-input"
-              title="母亲身高 cm（Khamis-Roche 遗传预测用）"
+              title="母亲身高（Khamis-Roche 遗传预测用）"
             />
-            <input
-              v-model="playerForm.trainingStartDate"
-              type="date"
-              class="inline-input date-input"
-              title="训练起始日期（训练年限修正用）"
-            />
+            <span class="date-label-wrap">
+              <span class="date-label">训练始于</span>
+              <input
+                v-model="playerForm.trainingStartDate"
+                type="date"
+                class="inline-input date-input"
+                title="开始系统训练的日期"
+              />
+            </span>
             <button class="inline-avatar" @click="openPicker">
               <img
                 v-if="isImageAvatar(playerForm.avatar)"
@@ -493,7 +499,11 @@ async function deletePlayerItem(id: string) {
 }
 .inline-input.short { width: 60px; text-align: center; }
 .inline-input.date-input { width: 130px; font-size: 13px; }
-.inline-input.parent-h-input { width: 72px; text-align: center; font-size: 13px; }
+.inline-input.parent-h-input { width: 82px; text-align: center; font-size: 13px; }
+
+/* Date label wrappers */
+.date-label-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.date-label { font-size: 11px; color: #888; white-space: nowrap; }
 .inline-select {
   padding: 8px 8px;
   border-radius: 10px;

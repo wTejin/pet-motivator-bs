@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { computePipeline } from '../services/pipeline'
+import { tryLuckyDrop } from '../services/luckyDrop.js'
 
 const db = new PrismaClient()
 export const assessmentRouter = Router()
@@ -59,6 +60,20 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     const player = await db.player.findFirst({ where: { id: playerId, coachId: coachId(req) } })
     if (!player) return res.status(404).json({ success: false, error: '球员不存在' })
 
+    // ── 每日上限：同一球员每天只能评估一次 ──
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayExisting = await db.dailyAssessment.findFirst({
+      where: { playerId, createdAt: { gte: todayStart.getTime() } },
+    })
+    if (todayExisting) {
+      return res.status(409).json({
+        success: false,
+        error: '该球员今日已评估，请使用编辑功能修改已有记录',
+        existingAssessmentId: todayExisting.id,
+      })
+    }
+
     const dimKeys = Object.keys(SUB_INDICATOR_MAP) as Array<keyof typeof SUB_INDICATOR_MAP>
     const dimScores: Record<string, number> = {}
     for (const dim of dimKeys) {
@@ -80,11 +95,19 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     const dimValues = Object.values(dimScores) as number[]
     const avgScore = dimValues.reduce((s, v) => s + v, 0) / dimValues.length
 
-    // 评估折算积分：均星×2，最低 1 分（确保参与就有收获）
-    const earnPoints = Math.max(1, Math.round(avgScore * 2))
+    // 评估折算积分：均星×1.5，最低 1 分（确保参与就有收获）
+    const earnPoints = Math.max(1, Math.round(avgScore * 1.5))
 
-    // ── 事务写入：评估 + 积分 + 玩家余额 ──
+    // ── 事务写入：评估 + 积分 + 玩家余额（双重防并发）──
     const assessment = await db.$transaction(async (tx) => {
+      // 事务内再次检查，防止并发重复评估
+      const dupCheck = await tx.dailyAssessment.findFirst({
+        where: { playerId, createdAt: { gte: todayStart.getTime() } },
+      })
+      if (dupCheck) {
+        throw new Error('ALREADY_ASSESSED_TODAY')
+      }
+
       const created = await tx.dailyAssessment.create({
         data: {
           coachId: coachId(req),
@@ -124,9 +147,9 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     })
 
     // ── 宠物联动：评估 → carePoints ──
-    let careBonus = 5 // 基础参与分
-    if (avgScore >= 4) careBonus = 15
-    else if (avgScore >= 3) careBonus = 10
+    let careBonus = 3 // 基础参与分
+    if (avgScore >= 4) careBonus = 10
+    else if (avgScore >= 3) careBonus = 6
 
     const pet = await db.pet.findUnique({ where: { playerId } })
     if (pet) {
@@ -139,6 +162,12 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     // 异步触发管道重算
     computePipeline(playerId).catch((err: any) => console.error('[Pipeline] async compute error:', err.message))
 
+    // 惊喜掉落：评估均星 ≥ 4 有概率触发
+    let luckyDrop = null
+    if (avgScore >= 4) {
+      luckyDrop = await tryLuckyDrop({ playerId, trigger: 'assessment' })
+    }
+
     res.json({
       success: true,
       data: {
@@ -146,9 +175,13 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
         createdAt: Number(assessment.createdAt),
         earnPoints,
         petCareBonus: careBonus,
+        luckyDrop,
       },
     })
   } catch (e: any) {
+    if (e.message === 'ALREADY_ASSESSED_TODAY') {
+      return res.status(409).json({ success: false, error: '该球员今日已评估，请使用编辑功能修改已有记录' })
+    }
     res.status(500).json({ success: false, error: e.message || '评估录入失败' })
   }
 })

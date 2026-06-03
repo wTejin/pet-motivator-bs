@@ -147,7 +147,7 @@
             >
               <span v-if="checkinLoading" class="checkin-spinner"></span>
               <span v-else-if="checkedInToday">✅ 今日已签到</span>
-              <span v-else>📅 每日签到 +5</span>
+              <span v-else>📅 每日签到 +8</span>
             </button>
           </div>
 
@@ -313,6 +313,9 @@
         </div>
       </template>
     </main>
+
+    <!-- 惊喜掉落弹窗 -->
+    <LuckyDropModal :drop="luckyDrop" @close="luckyDrop = null" />
   </div>
 </template>
 
@@ -323,6 +326,8 @@ import { publicApi } from '@/api'
 import api from '@/api'
 import BioLeapPlayerCard from '@/components/BioLeapPlayerCard.vue'
 import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
+import LuckyDropModal from '@/components/LuckyDropModal.vue'
+import type { LuckyDropResult } from '@/components/LuckyDropModal.vue'
 import type { PlayerStats } from '@shared/types'
 
 const route = useRoute()
@@ -397,6 +402,7 @@ const coachPhone = ref('')
 const isDisplayMode = ref(false)
 const checkedInToday = ref(false)
 const checkinLoading = ref(false)
+const luckyDrop = ref<LuckyDropResult | null>(null)
 const feedEffectActive = ref(false)
 const evolutionEffectActive = ref(false)
 interface StagePreview {
@@ -908,6 +914,10 @@ async function handleCheckin() {
       }
     }
     actionMessage.value = msg
+    // 惊喜掉落弹窗
+    if (data.luckyDrop) {
+      luckyDrop.value = data.luckyDrop
+    }
   } catch (e: any) {
     actionError.value = e.response?.data?.error || '签到失败'
   } finally {

@@ -151,6 +151,8 @@ model ShopItem {
   imageClass  String @default("")
   stock       Int @default(999)
   isActive    Boolean @default(true)
+  isLuckyDrop Boolean @default(false)
+  rarity      String  @default("common")
   sortOrder   Int @default(0)
   createdAt   BigInt
 

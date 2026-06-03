@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import multer from 'multer'
 import path from 'path'
 import { AuthRequest } from '../middleware/auth'
+import { tryLuckyDrop } from '../services/luckyDrop.js'
 
 const db = new PrismaClient()
 export const playerRouter = Router()
@@ -492,7 +493,7 @@ async function handleFeed(req: Request, res: Response) {
   const pet = await db.pet.findUnique({ where: { playerId } })
   if (!pet) return res.status(404).json({ success: false, error: '宠物不存在' })
 
-  const FEEDING_COST = 5, FEEDING_CARE_POINTS = 1, HUNGER_GAIN = 25, MOOD_GAIN_FEED = 1
+  const FEEDING_COST = 5, FEEDING_CARE_POINTS = 3, HUNGER_GAIN = 25, MOOD_GAIN_FEED = 1
   if (player.currentPoints < FEEDING_COST) {
     return res.status(400).json({ success: false, error: `积分不足，需要 ${FEEDING_COST} 分` })
   }
@@ -1158,7 +1159,7 @@ publicRouter.post('/public/player/:playerId/checkin', async (req, res) => {
   }
 
   const now = Date.now()
-  const CHECKIN_POINTS = 5
+  const CHECKIN_POINTS = 8
 
   try {
     const updatedPlayer = await db.$transaction(async (tx) => {
@@ -1201,14 +1202,18 @@ publicRouter.post('/public/player/:playerId/checkin', async (req, res) => {
     })
 
     // 检查连续训练奖励（在事务外，避免阻塞）
-    const streakBonus = await calculateStreakBonus(playerId, player.coachId, now)
+    const streakResult = await calculateStreakBonus(playerId, player.coachId, now)
+
+    // 惊喜掉落（每日签到 + streak 都可能触发）
+    const luckyDrop = streakResult.luckyDrop ?? (await tryLuckyDrop({ playerId, trigger: 'checkin' }))
 
     res.json({
       success: true,
       data: {
         checkinPoints: CHECKIN_POINTS,
-        streakBonus,
+        streakBonus: streakResult.bonusEvents,
         currentPoints: updatedPlayer.currentPoints,
+        luckyDrop,
       },
     })
   } catch (e: any) {
@@ -1221,6 +1226,7 @@ publicRouter.post('/public/player/:playerId/checkin', async (req, res) => {
 
 async function calculateStreakBonus(playerId: string, coachId: string, now: number) {
   const bonusEvents: { days: number; points: number; label: string }[] = []
+  let luckyDrop = null
 
   // 基于签到记录计算连续活跃天数
   const checkins = await db.scoreRecord.findMany({
@@ -1260,15 +1266,17 @@ async function calculateStreakBonus(playerId: string, coachId: string, now: numb
       await db.scoreRecord.create({
         data: {
           coachId, playerId, ruleId: null, indicatorId: null,
-          points: 20, type: 'bonus', reason: '连续3天活跃奖励',
+          points: 15, type: 'bonus', reason: '连续3天活跃奖励',
           operatorType: 'system', operatorId: 'system', createdAt: now,
         },
       })
       await db.player.update({
         where: { id: playerId },
-        data: { currentPoints: { increment: 20 }, updatedAt: now },
+        data: { currentPoints: { increment: 15 }, updatedAt: now },
       })
-      bonusEvents.push({ days: 3, points: 20, label: '连续3天活跃奖励' })
+      bonusEvents.push({ days: 3, points: 15, label: '连续3天活跃奖励' })
+      // 惊喜掉落：连续3天签到
+      luckyDrop = await tryLuckyDrop({ playerId, trigger: 'streak3' })
     }
   }
 
@@ -1291,10 +1299,12 @@ async function calculateStreakBonus(playerId: string, coachId: string, now: numb
         data: { currentPoints: { increment: 50 }, updatedAt: now },
       })
       bonusEvents.push({ days: 7, points: 50, label: '连续7天活跃奖励' })
+      // 惊喜掉落：连续7天签到必掉
+      luckyDrop = await tryLuckyDrop({ playerId, trigger: 'streak7' })
     }
   }
 
-  return bonusEvents
+  return { bonusEvents, luckyDrop }
 }
 
 // ===== 创建宠物 =====

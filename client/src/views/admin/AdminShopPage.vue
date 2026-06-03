@@ -53,6 +53,19 @@
             <label class="field-label">排序</label>
             <input v-model.number="shopForm.sortOrder" type="number" placeholder="0" class="field-input" />
           </div>
+          <div class="form-field short">
+            <label class="field-label">
+              <input type="checkbox" v-model="shopForm.isLuckyDrop" style="margin-right:4px" />
+              惊喜掉落
+            </label>
+            <select v-if="shopForm.isLuckyDrop" v-model="shopForm.rarity" class="field-input" style="margin-top:4px">
+              <option value="common">🟢 普通 (55%)</option>
+              <option value="uncommon">🔵 稀有 (28%)</option>
+              <option value="rare">🟣 精良 (12%)</option>
+              <option value="epic">🟠 史诗 (4%)</option>
+              <option value="legendary">🟡 传说 (1%)</option>
+            </select>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-field flex-2">
@@ -156,6 +169,10 @@
           </div>
           <div class="item-name">{{ item.name }}</div>
           <span class="item-badge" :class="item.type">{{ typeLabel(item.type) }}</span>
+          <span v-if="item.isLuckyDrop" class="item-badge lucky-badge">🎰 惊喜</span>
+          <span v-if="item.rarity && item.isLuckyDrop" class="item-badge rarity-badge" :style="{ background: rarityColors[item.rarity] || '#888' }">
+            {{ rarityLabels[item.rarity] || item.rarity }}
+          </span>
         </div>
         <div class="item-desc">{{ item.description || '暂无描述' }}</div>
         <div class="item-meta">
@@ -200,6 +217,8 @@ interface ShopItem {
   price: number
   stock: number
   isActive: boolean
+  isLuckyDrop?: boolean
+  rarity?: string
   effect: any
   imageUrl?: string
   imageClass: string
@@ -231,18 +250,28 @@ const shopForm = ref({
   stock: 999,
   imageUrl: '',
   sortOrder: 0,
+  isLuckyDrop: false,
+  rarity: 'common',
 })
 
 const effectForm = ref({ hunger: 0, mood: 0, carePoints: 0, decoration: '', backgroundId: '' })
 
 const categoryTabs = [
   { value: 'all', label: '全部', icon: '📦' },
+  { value: 'lucky', label: '惊喜掉落', icon: '🎰' },
   { value: 'food', label: '食物类', icon: '🍎' },
   { value: 'accessory', label: '配饰类', icon: '🎀' },
   { value: 'background', label: '背景类', icon: '🖼️' },
   { value: 'toy', label: '玩具类', icon: '🧸' },
   { value: 'magic', label: '魔法类', icon: '✨' },
 ]
+
+const rarityLabels: Record<string, string> = {
+  common: '普通', uncommon: '稀有', rare: '精良', epic: '史诗', legendary: '传说',
+}
+const rarityColors: Record<string, string> = {
+  common: '#4ade80', uncommon: '#60a5fa', rare: '#c084fc', epic: '#fb923c', legendary: '#fbbf24',
+}
 
 onMounted(loadItems)
 
@@ -257,6 +286,7 @@ async function loadItems() {
 
 const filteredItems = computed(() => {
   if (activeCategory.value === 'all') return items.value
+  if (activeCategory.value === 'lucky') return items.value.filter((i) => i.isLuckyDrop)
   return items.value.filter((i) => i.type === activeCategory.value)
 })
 
@@ -295,6 +325,8 @@ function startEdit(item: ShopItem) {
     stock: item.stock,
     imageUrl: item.imageUrl || '',
     sortOrder: item.sortOrder,
+    isLuckyDrop: item.isLuckyDrop || false,
+    rarity: item.rarity || 'common',
   }
   const eff = item.effect || {}
   const consumeEff = eff.consume || eff
@@ -310,7 +342,7 @@ function startEdit(item: ShopItem) {
 
 function cancelEdit() {
   editingItem.value = null
-  shopForm.value = { name: '', description: '', emoji: '📦', type: 'food', usageType: 'consume', usageCount: null, price: 0, stock: 999, imageUrl: '', sortOrder: 0 }
+  shopForm.value = { name: '', description: '', emoji: '📦', type: 'food', usageType: 'consume', usageCount: null, price: 0, stock: 999, imageUrl: '', sortOrder: 0, isLuckyDrop: false, rarity: 'common' }
   effectForm.value = { hunger: 0, mood: 0, carePoints: 0, decoration: '', backgroundId: '' }
 }
 
@@ -724,6 +756,8 @@ async function deleteItem(id: string) {
 .item-badge.accessory { background: rgba(236, 72, 153, 0.1); color: #db2777; }
 .item-badge.background { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
 .item-badge.magic { background: rgba(168, 85, 247, 0.1); color: #9333ea; }
+.item-badge.lucky-badge { background: rgba(251, 191, 36, 0.15); color: #b45309; font-size: 10px; }
+.item-badge.rarity-badge { color: #fff; font-size: 10px; }
 
 .item-desc {
   font-size: 12px;

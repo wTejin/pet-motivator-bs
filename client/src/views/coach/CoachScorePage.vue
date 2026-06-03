@@ -476,6 +476,7 @@ async function submitAssessment() {
   if (!canSubmitAssess.value) return
   statusError.value = ''
   try {
+    let luckyDrops = 0
     for (const pid of selectedIds.value) {
       // 构建评估数据：用有效维度分（子指标自动计算优先，手动打分兜底）
       const body: Record<string, any> = {
@@ -492,10 +493,13 @@ async function submitAssessment() {
           if (typeof v === 'number' && v >= 1 && v <= 5) body[key] = v
         }
       }
-      await assessmentApi.create(body)
+      const res = await assessmentApi.create(body)
+      if (res.data?.data?.luckyDrop) luckyDrops++
     }
-    statusMessage.value = `已为 ${selectedIds.value.length} 名球员提交评估`
-    setTimeout(() => statusMessage.value = '', 2500)
+    let msg = `已为 ${selectedIds.value.length} 名球员提交评估`
+    if (luckyDrops > 0) msg += ` · 🎰 ${luckyDrops} 人触发惊喜掉落！`
+    statusMessage.value = msg
+    setTimeout(() => statusMessage.value = '', 3000)
   } catch (e: any) {
     statusError.value = e.response?.data?.error || '评估提交失败'
     setTimeout(() => statusError.value = '', 3000)

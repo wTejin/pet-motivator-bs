@@ -4,7 +4,7 @@ export type PetStage = 'egg' | 'level1' | 'level2' | 'level3' | 'rare'
 export type PetCategory = 'dog' | 'cat' | 'dragon' | 'fantasy' | 'ocean' | 'cute'
 export type ScoreType = 'earn' | 'spend' | 'bonus' | 'penalty' | 'system'
 export type OperatorType = 'coach' | 'system'
-export type ShopItemType = 'food' | 'accessory' | 'background' | 'toy' | 'special'
+export type ShopItemType = 'food' | 'accessory' | 'background' | 'toy' | 'special' | 'badge'
 export type ShopItemUsageType = 'consume' | 'equip' | 'rent' | 'charge' | 'replace'
 export type AccessorySlotType = 'head' | 'neck' | 'body' | 'back' | 'face'
 export type PlayerModeType = 'open' | 'display'
@@ -19,7 +19,7 @@ export interface Coach { id: string; phone: string; passwordHash: string; name: 
 export interface Player { id: string; coachId: string; name: string; avatar: string; age?: number | null; gender?: string | null; currentPoints: number; isActive: boolean; createdAt: number; updatedAt: number }
 export interface Pet { id: string; playerId: string; speciesId: string; name: string; stage: PetStage; carePoints: number; level: number; hunger: number; mood: number; currentSkin: string; equippedDecorations: string[]; lastDecayAt: number; lastFedAt: number; lastPlayedAt: number; createdAt: number; evolvedAt: number }
 export interface ScoreRecord { id: string; coachId: string; playerId: string; ruleId: string | null; indicatorId: string | null; points: number; type: ScoreType; reason: string; operatorType: OperatorType; operatorId: string; createdAt: number }
-export interface ShopItem { id: string; coachId: string | null; name: string; description: string; type: ShopItemType; usageType: ShopItemUsageType; usageCount: number | null; price: number; effect: { hunger?: number; mood?: number; experience?: number; decoration?: string; backgroundId?: string }; imageClass: string; stock: number; isActive: boolean; sortOrder: number; createdAt: number }
+export interface ShopItem { id: string; coachId: string | null; name: string; description: string; type: ShopItemType; usageType: ShopItemUsageType; usageCount: number | null; price: number; effect: { hunger?: number; mood?: number; experience?: number; decoration?: string; backgroundId?: string; badgeSvg?: string }; imageClass: string; stock: number; isActive: boolean; isLuckyDrop?: boolean; rarity?: string; sortOrder: number; createdAt: number }
 export interface PlayerInventory { id: string; playerId: string; itemId: string; quantity: number; isEquipped: boolean; acquiredAt: number; expiresAt?: number; lastUnequippedAt?: number }
 
 export interface ApiResponse<T> { success: boolean; data?: T; message?: string; error?: string }

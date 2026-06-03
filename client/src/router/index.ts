@@ -32,7 +32,6 @@ const router = createRouter({
       component: () => import('@/views/coach/CoachLayout.vue'),
       children: [
         { path: '', redirect: '/coach/score' },
-        { path: 'dashboard', name: 'coachBioDashboard', component: () => import('@/views/coach/CoachDashboardPage.vue') },
         { path: 'score', name: 'coachScore', component: () => import('@/views/coach/CoachScorePage.vue') },
 
         { path: 'players', name: 'coachPlayers', component: () => import('@/views/coach/CoachPlayersPage.vue') },
