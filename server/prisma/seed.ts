@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client'
-import { hashPassword } from '../src/services/auth'
+import bcrypt from 'bcryptjs'
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
+}
 
 const db = new PrismaClient()
 

@@ -292,7 +292,7 @@ adminRouter.get('/shop-items', authenticate, requireRole('admin'), async (_req: 
 })
 
 adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
-  const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder } = req.body
+  const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder, isLuckyDrop, rarity } = req.body
   if (!name || !type || price == null) {
     return res.status(400).json({ success: false, error: '名称、类型、价格必填' })
   }
@@ -312,6 +312,8 @@ adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: 
       imageUrl: imageUrl || null,
       imageClass: imageClass || '',
       sortOrder: sortOrder != null ? Number(sortOrder) : 0,
+      isLuckyDrop: isLuckyDrop || false,
+      rarity: rarity || 'common',
       createdAt: now,
     },
   })
@@ -320,7 +322,7 @@ adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: 
 
 adminRouter.put('/shop-items/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
   const id = req.params.id as string
-  const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder, isActive } = req.body
+  const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder, isActive, isLuckyDrop, rarity } = req.body
   const existing = await db.shopItem.findUnique({ where: { id } })
   if (!existing) return res.status(404).json({ success: false, error: '商品不存在' })
 
@@ -339,6 +341,8 @@ adminRouter.put('/shop-items/:id', authenticate, requireRole('admin'), async (re
   if (imageClass !== undefined) updateData.imageClass = imageClass
   if (sortOrder !== undefined) updateData.sortOrder = Number(sortOrder)
   if (isActive !== undefined) updateData.isActive = isActive
+  if (isLuckyDrop !== undefined) updateData.isLuckyDrop = isLuckyDrop
+  if (rarity !== undefined) updateData.rarity = rarity
 
   const updated = await db.shopItem.update({ where: { id }, data: updateData })
   res.json({ success: true, data: updated })

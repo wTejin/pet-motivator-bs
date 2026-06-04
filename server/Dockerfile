@@ -20,5 +20,5 @@ CMD ["sh", "-c", "\
   mkdir -p /app/public/avatars /app/public/images/pets && \
   cp -n /app/public-default/avatars/* /app/public/avatars/ 2>/dev/null; \
   cp -n /app/public-default/images/pets/* /app/public/images/pets/ 2>/dev/null; \
-  npx prisma migrate deploy && node dist/src/index.js\
+  npx prisma migrate deploy && npx tsx prisma/seed.ts && node dist/src/index.js\
 "]

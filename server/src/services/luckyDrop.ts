@@ -15,6 +15,7 @@ export interface LuckyDropItem {
   type: string
   rarity: string
   imageClass: string
+  imageUrl?: string | null
   effect: any
 }
 
@@ -97,6 +98,7 @@ export async function tryLuckyDrop(params: {
       type: true,
       rarity: true,
       imageClass: true,
+      imageUrl: true,
       effect: true,
     },
   })
@@ -146,6 +148,7 @@ export async function tryLuckyDrop(params: {
       type: picked.type,
       rarity: picked.rarity,
       imageClass: picked.imageClass,
+      imageUrl: picked.imageUrl,
       effect: picked.effect,
     },
     animation: RARITY_ANIMATION[picked.rarity] || 'green',
