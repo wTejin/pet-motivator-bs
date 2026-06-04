@@ -118,7 +118,6 @@
         v-for="card in cards"
         :key="card.player.id"
         class="player-card-wrapper"
-        :class="{ inactive: card.inactive }"
       >
         <!-- Bio-Leap 潜力卡主体 -->
         <BioLeapPlayerCard
@@ -136,9 +135,6 @@
           </div>
           <div class="actions-right">
             <button class="act-btn edit" @click="startEdit(card)">编辑</button>
-            <button class="act-btn toggle" @click="toggleActive(card)">
-              {{ card.inactive ? '启用' : '停用' }}
-            </button>
             <button class="act-btn delete" @click="deletePlayerItem(card.player.id)">删除</button>
           </div>
         </div>
@@ -228,7 +224,6 @@ interface CardData {
   potentialIndex: number | null
   potentialTier: string | null
   currentPoints: number
-  inactive: boolean
   raw: PlayerRaw
 }
 
@@ -349,14 +344,13 @@ async function loadSnapshots() {
         potentialIndex: snapshot?.potentialIndex ?? null,
         potentialTier: snapshot?.potentialTier ?? null,
         currentPoints: p.currentPoints,
-        inactive: !p.isActive,
         raw: p,
       } as CardData
     } catch {
       return {
         player: { id: p.id, name: p.name, avatar: p.avatar || '😊', birthDate: null, gender: null },
         snapshot: null, age: null, potentialIndex: null, potentialTier: null,
-        currentPoints: p.currentPoints, inactive: !p.isActive, raw: p,
+        currentPoints: p.currentPoints, raw: p,
       } as CardData
     }
   })
@@ -461,15 +455,8 @@ async function saveEdit() {
   } catch (e: any) { alert(e.response?.data?.error || '保存失败') }
 }
 
-async function toggleActive(card: CardData) {
-  try {
-    await coachApi.updatePlayer(card.player.id, { isActive: card.inactive })
-    await loadAll()
-  } catch (e: any) { alert(e.response?.data?.error || '操作失败') }
-}
-
 async function deletePlayerItem(id: string) {
-  if (!confirm('确认删除该球员？此操作不可撤销。')) return
+  if (!confirm('确认停用该球员？停用后数据将被保留，可在管理后台恢复。')) return
   try {
     await coachApi.deletePlayer(id)
     await loadAll()
@@ -685,13 +672,6 @@ async function deletePlayerItem(id: string) {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(0,0,0,0.12);
 }
-.player-card-wrapper.inactive {
-  opacity: 0.55;
-}
-.player-card-wrapper.inactive:hover {
-  opacity: 0.75;
-}
-
 /* ── Action Bar ── */
 .card-actions-bar {
   display: flex;

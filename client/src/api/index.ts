@@ -94,6 +94,17 @@ export const adminApi = {
   deleteShopItem(id: string) {
     return api.delete(`/admin/shop-items/${id}`)
   },
+
+  // 球员管理（跨教练）
+  getPlayers() {
+    return api.get('/admin/players')
+  },
+  deletePlayer(id: string) {
+    return api.delete(`/admin/players/${id}`)
+  },
+  restorePlayer(id: string) {
+    return api.put(`/admin/players/${id}/restore`)
+  },
 }
 
 // ── Coach API ────────────────────────────────────────────────────────────────

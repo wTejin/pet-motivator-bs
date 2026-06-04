@@ -45,13 +45,16 @@
       <!-- 业务规模 -->
       <div class="section-label">📈 业务规模</div>
       <div class="stats-grid">
-        <div class="stat-card">
+        <router-link to="/admin/players" class="stat-card clickable">
           <div class="stat-icon">⚽</div>
           <div class="stat-info">
             <div class="stat-label">总球员数</div>
-            <div class="stat-value" style="color: #1e88e5">{{ stats.playerCount }}</div>
+            <div class="stat-value" style="color: #1e88e5">
+              {{ stats.playerCount }}
+              <span class="stat-sub">活跃 {{ stats.activePlayerCount }} / 停用 {{ stats.inactivePlayerCount }}</span>
+            </div>
           </div>
-        </div>
+        </router-link>
         <div class="stat-card">
           <div class="stat-icon">🆕</div>
           <div class="stat-info">
@@ -116,6 +119,8 @@ const stats = ref({
   expiringCoachCount: 0,
   expiredCoachCount: 0,
   playerCount: 0,
+  activePlayerCount: 0,
+  inactivePlayerCount: 0,
   todayNewPlayerCount: 0,
   petCount: 0,
   shopItemCount: 0,
@@ -156,6 +161,8 @@ onMounted(async () => {
     if (statsRes.data.success) {
       const d = statsRes.data.data
       stats.value.playerCount = d.playerCount || 0
+      stats.value.activePlayerCount = d.activePlayerCount || 0
+      stats.value.inactivePlayerCount = d.inactivePlayerCount || 0
       stats.value.todayNewPlayerCount = d.todayNewPlayerCount || 0
       stats.value.petCount = d.petCount || 0
       stats.value.shopItemCount = d.shopItemCount || 0
@@ -255,6 +262,20 @@ onMounted(async () => {
 
 .stat-card.expired {
   border-left: 3px solid #dc2626;
+}
+
+.stat-card.clickable {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.stat-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #aaa;
+  margin-top: 2px;
 }
 
 .stat-icon {

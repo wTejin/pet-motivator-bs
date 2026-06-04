@@ -154,7 +154,7 @@ coachRouter.put('/me', authenticate, requireRole('coach'), async (req: AuthReque
 
 coachRouter.get('/players', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
   const players = await db.player.findMany({
-    where: { coachId: coachId(req) }, orderBy: { createdAt: 'asc' },
+    where: { coachId: coachId(req), isActive: true }, orderBy: { createdAt: 'asc' },
     include: { pet: true },
   })
   const data = players.map(p => ({

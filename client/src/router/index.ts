@@ -56,6 +56,7 @@ const router = createRouter({
         { path: 'coaches', name: 'adminCoaches', component: () => import('@/views/admin/AdminCoachesPage.vue') },
         { path: 'shop', name: 'adminShop', component: () => import('@/views/admin/AdminShopPage.vue') },
         { path: 'pet-species', name: 'adminPetSpecies', component: () => import('@/views/admin/AdminPetSpeciesPage.vue') },
+        { path: 'players', name: 'adminPlayers', component: () => import('@/views/admin/AdminPlayersPage.vue') },
       ],
     },
   ],

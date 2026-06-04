@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "ShopItem" ADD COLUMN "isLuckyDrop" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "ShopItem" ADD COLUMN "rarity" TEXT NOT NULL DEFAULT 'common';

@@ -148,8 +148,9 @@ adminRouter.get('/stats', authenticate, requireRole('admin'), async (_req: AuthR
   const now = Date.now()
   const todayStart = new Date().setHours(0, 0, 0, 0)
 
-  const [playerCount, petCount, shopItemCount, todayNewPlayerCount] = await Promise.all([
+  const [playerCount, activePlayerCount, petCount, shopItemCount, todayNewPlayerCount] = await Promise.all([
     db.player.count(),
+    db.player.count({ where: { isActive: true } }),
     db.pet.count(),
     db.shopItem.count({ where: { coachId: null } }),
     db.player.count({ where: { createdAt: { gte: BigInt(todayStart) } } }),
@@ -159,12 +160,76 @@ adminRouter.get('/stats', authenticate, requireRole('admin'), async (_req: AuthR
     success: true,
     data: {
       playerCount,
+      activePlayerCount,
+      inactivePlayerCount: playerCount - activePlayerCount,
       petCount,
       shopItemCount,
       todayNewPlayerCount,
       serverTime: now,
     },
   })
+})
+
+// ---- 球员管理（跨教练）----
+
+adminRouter.get('/players', authenticate, requireRole('admin'), async (_req: AuthRequest, res: Response) => {
+  const players = await db.player.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      coach: { select: { id: true, name: true, phone: true, school: true } },
+      pet: { select: { id: true, name: true, stage: true, speciesId: true, level: true } },
+    },
+  })
+
+  const data = players.map(p => ({
+    id: p.id,
+    name: p.name,
+    avatar: p.avatar,
+    isActive: p.isActive,
+    age: p.age,
+    birthDate: p.birthDate,
+    gender: p.gender,
+    currentPoints: p.currentPoints,
+    coachId: p.coachId,
+    coachName: p.coach.name,
+    coachPhone: p.coach.phone,
+    coachSchool: p.coach.school,
+    pet: p.pet ? {
+      id: p.pet.id, name: p.pet.name, stage: p.pet.stage,
+      speciesId: p.pet.speciesId, level: p.pet.level,
+    } : null,
+    createdAt: Number(p.createdAt),
+    updatedAt: Number(p.updatedAt),
+  }))
+
+  res.json({ success: true, data })
+})
+
+adminRouter.delete('/players/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const player = await db.player.findUnique({ where: { id } })
+  if (!player) return res.status(404).json({ success: false, error: '球员不存在' })
+
+  await db.player.delete({ where: { id } })
+
+  res.json({ success: true, message: '球员数据已永久删除' })
+})
+
+adminRouter.put('/players/:id/restore', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as string
+  const player = await db.player.findUnique({ where: { id } })
+  if (!player) return res.status(404).json({ success: false, error: '球员不存在' })
+
+  if (player.isActive) {
+    return res.status(400).json({ success: false, error: '球员当前已是活跃状态' })
+  }
+
+  const updated = await db.player.update({
+    where: { id },
+    data: { isActive: true, updatedAt: Date.now() },
+  })
+
+  res.json({ success: true, data: { id: updated.id, isActive: updated.isActive }, message: '球员已恢复' })
 })
 
 adminRouter.get('/pet-species', authenticate, requireRole('admin'), async (_req: AuthRequest, res: Response) => {
