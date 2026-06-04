@@ -159,8 +159,8 @@
         <div class="item-header">
           <div class="item-preview">
             <img
-              v-if="item.imageUrl"
-              :src="item.imageUrl"
+              v-if="getItemImage(item)"
+              :src="getItemImage(item)"
               class="preview-img"
               alt="icon"
               @error="item.imageUrl = ''"
@@ -183,7 +183,9 @@
         <div class="item-effects">
           <span v-if="effectValue(item.effect, 'hunger')" class="eff-tag">饥饿 {{ effectValue(item.effect, 'hunger') }}</span>
           <span v-if="effectValue(item.effect, 'mood')" class="eff-tag">心情 {{ effectValue(item.effect, 'mood') }}</span>
-          <span v-if="effectValue(item.effect, 'experience')" class="eff-tag">经验 {{ effectValue(item.effect, 'experience') }}</span>
+          <span v-if="effectValue(item.effect, 'carePoints')" class="eff-tag">成长 {{ effectValue(item.effect, 'carePoints') }}</span>
+          <span v-if="effectText(item.effect, 'decoration')" class="eff-tag equip-tag">🎀 {{ effectText(item.effect, 'decoration') }}</span>
+          <span v-if="effectText(item.effect, 'backgroundId')" class="eff-tag equip-tag">🖼️ {{ effectText(item.effect, 'backgroundId') }}</span>
         </div>
         <div class="item-actions">
           <button class="act-btn edit" @click="startEdit(item)">编辑</button>
@@ -301,14 +303,31 @@ function typeLabel(type: string): string {
   return map[type] || type
 }
 
+function getItemImage(item: any): string | undefined {
+  if (item.imageUrl) return item.imageUrl
+  const badgeSvg = item.effect?.equip?.badgeSvg
+  if (badgeSvg) return badgeSvg
+  return undefined
+}
+
 function effectValue(effect: any, key: string): number | null {
   if (!effect || typeof effect !== 'object') return null
-  // 优先从新格式 effect.consume 中读取
+  // 优先从 effect.consume 中读取
   const consumeVal = effect.consume?.[key]
   if (consumeVal != null) return Number(consumeVal)
+  // 其次从 effect.equip 中读取（装备类的 mood 存为 moodBonus）
+  const equipVal = effect.equip?.[key] ?? (key === 'mood' ? effect.equip?.moodBonus : undefined)
+  if (equipVal != null) return Number(equipVal)
   // 兼容旧格式直接字段
   const directVal = effect[key]
   if (directVal != null) return Number(directVal)
+  return null
+}
+
+function effectText(effect: any, key: string): string | null {
+  if (!effect || typeof effect !== 'object') return null
+  const equipVal = effect.equip?.[key]
+  if (equipVal && typeof equipVal === 'string') return equipVal
   return null
 }
 
@@ -798,6 +817,11 @@ async function deleteItem(id: string) {
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.04);
   color: #666;
+}
+
+.eff-tag.equip-tag {
+  background: rgba(168, 85, 247, 0.1);
+  color: #9333ea;
 }
 
 .item-actions {

@@ -87,8 +87,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import RadarChart from './RadarChart.vue'
-import { BIO_LEAP_DIMENSIONS } from '@shared/types'
-import type { PipelineSnapshot } from '@shared/types'
+import { BIO_LEAP_DIMENSIONS, type PipelineSnapshotData } from '@shared/types'
 
 const brokenAvatars = ref(new Set<string>())
 const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
@@ -110,8 +109,8 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const props = defineProps<{
   player: { id: string; name: string; avatar: string; birthDate: string | null; trainingStartDate?: string | null; gender?: string | null }
-  snapshot: PipelineSnapshot | null
-  prevSnapshot?: PipelineSnapshot | null
+  snapshot: PipelineSnapshotData | null
+  prevSnapshot?: PipelineSnapshotData | null
   age?: number | null
   potentialIndex?: number | null
   potentialTier?: string | null
@@ -450,7 +449,7 @@ const radarSize = computed(() => {
   .bio-leap-card { padding: 10px; gap: 8px; }
   .card-header { gap: 4px; }
   .header-name { font-size: 13px; }
-  .header-meta { font-size: 10px; }
+  .header-meta { font-size: 10px; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.4; }
   .overall-score { font-size: 22px; }
   .card-avatar-img { width: 30px; height: 30px; }
 

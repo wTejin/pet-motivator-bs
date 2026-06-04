@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 
 export interface LuckyDropItem {
   id: string
@@ -9,6 +10,7 @@ export interface LuckyDropItem {
   type: string
   rarity: string
   imageClass: string
+  imageUrl?: string | null
   effect: any
 }
 
@@ -19,11 +21,14 @@ export interface LuckyDropResult {
 
 const props = defineProps<{
   drop: LuckyDropResult | null
+  playerId?: string
 }>()
 
 const emit = defineEmits<{
   close: []
 }>()
+
+const router = useRouter()
 
 const visible = ref(false)
 const dismissing = ref(false)
@@ -50,6 +55,15 @@ function dismiss() {
 function takeIt() {
   if (autoTimer) { clearTimeout(autoTimer); autoTimer = null }
   dismiss()
+}
+
+function goToBackpack() {
+  if (autoTimer) { clearTimeout(autoTimer); autoTimer = null }
+  const pid = props.playerId
+  dismiss()
+  if (pid) {
+    router.push(`/player/${pid}/shop`)
+  }
 }
 
 onBeforeUnmount(() => {
@@ -102,7 +116,19 @@ const rarityColor: Record<string, string> = {
 
           <!-- 物品图标 -->
           <div class="item-emoji-wrap">
-            <span class="item-emoji">{{ drop.item.emoji }}</span>
+            <img
+              v-if="drop.item.type === 'badge' && drop.item.effect?.equip?.badgeSvg"
+              :src="drop.item.effect.equip.badgeSvg"
+              class="item-badge-img"
+              alt="badge"
+            />
+            <img
+              v-else-if="drop.item.imageUrl"
+              :src="drop.item.imageUrl"
+              class="item-emoji"
+              alt="icon"
+            />
+            <span v-else class="item-emoji">{{ drop.item.emoji }}</span>
           </div>
 
           <!-- 标题 -->
@@ -116,6 +142,9 @@ const rarityColor: Record<string, string> = {
 
           <!-- 收下按钮 -->
           <button class="take-btn" @click="takeIt">收下！🎉</button>
+
+          <!-- 查看背包 -->
+          <button class="backpack-link" @click="goToBackpack">🎒 查看我的背包</button>
         </div>
       </div>
     </Transition>
@@ -231,6 +260,14 @@ const rarityColor: Record<string, string> = {
   animation: emoji-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   filter: drop-shadow(0 0 20px var(--glow));
 }
+.item-badge-img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  display: inline-block;
+  animation: emoji-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 20px var(--glow));
+}
 @keyframes emoji-pop {
   0% { transform: scale(0) rotate(-30deg); }
   60% { transform: scale(1.3) rotate(5deg); }
@@ -276,6 +313,24 @@ const rarityColor: Record<string, string> = {
 }
 .take-btn:active {
   transform: scale(0.97);
+}
+
+.backpack-link {
+  display: block;
+  margin: 12px auto 0;
+  background: transparent;
+  color: #a5b4fc;
+  border: 1px solid rgba(165, 180, 252, 0.3);
+  border-radius: 12px;
+  padding: 8px 24px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.backpack-link:hover {
+  background: rgba(165, 180, 252, 0.15);
+  color: #c7d2fe;
+  border-color: rgba(165, 180, 252, 0.6);
 }
 
 /* ── 过渡 ── */

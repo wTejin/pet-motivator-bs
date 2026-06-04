@@ -16,27 +16,36 @@
               class="inline-input"
               @keyup.enter="editingPlayer ? saveEdit() : addPlayer()"
             />
-            <input
-              v-model.number="playerForm.age"
-              type="number"
-              placeholder="年龄"
-              class="inline-input short"
-              @keyup.enter="editingPlayer ? saveEdit() : addPlayer()"
-            />
             <select v-model="playerForm.gender" class="inline-select">
               <option value="">性别</option>
               <option value="male">♂️ 男</option>
               <option value="female">♀️ 女</option>
             </select>
+            <!-- 出生日期：桌面端年月日下拉、移动端原生 date -->
             <span class="date-label-wrap">
               <span class="date-label">出生</span>
+              <span class="date-select-group desktop-only">
+                <select v-model.number="birthYear" class="inline-select date-sel-yr">
+                  <option :value="null">年</option>
+                  <option v-for="y in birthYears" :key="y" :value="y">{{ y }}</option>
+                </select>
+                <select v-model.number="birthMonth" class="inline-select date-sel-mo">
+                  <option :value="null">月</option>
+                  <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                </select>
+                <select v-model.number="birthDay" class="inline-select date-sel-dy">
+                  <option :value="null">日</option>
+                  <option v-for="d in birthDaysInMonth" :key="d" :value="d">{{ d }}日</option>
+                </select>
+              </span>
               <input
                 v-model="playerForm.birthDate"
                 type="date"
-                class="inline-input date-input"
+                class="inline-input date-input mobile-only"
                 title="出生日期"
               />
             </span>
+            <span v-if="computedAge !== null" class="age-display">{{ computedAge }}岁</span>
             <input
               v-model.number="playerForm.fatherHeightCm"
               type="number"
@@ -53,12 +62,27 @@
               class="inline-input parent-h-input"
               title="母亲身高（Khamis-Roche 遗传预测用）"
             />
+            <!-- 训练始于：桌面端年月日下拉、移动端原生 date -->
             <span class="date-label-wrap">
               <span class="date-label">训练始于</span>
+              <span class="date-select-group desktop-only">
+                <select v-model.number="trainYear" class="inline-select date-sel-yr">
+                  <option :value="null">年</option>
+                  <option v-for="y in trainYears" :key="y" :value="y">{{ y }}</option>
+                </select>
+                <select v-model.number="trainMonth" class="inline-select date-sel-mo">
+                  <option :value="null">月</option>
+                  <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                </select>
+                <select v-model.number="trainDay" class="inline-select date-sel-dy">
+                  <option :value="null">日</option>
+                  <option v-for="d in trainDaysInMonth" :key="d" :value="d">{{ d }}日</option>
+                </select>
+              </span>
               <input
                 v-model="playerForm.trainingStartDate"
                 type="date"
-                class="inline-input date-input"
+                class="inline-input date-input mobile-only"
                 title="开始系统训练的日期"
               />
             </span>
@@ -185,15 +209,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { coachApi, pipelineApi } from '@/api'
-import { brokenImages, onImgError } from '@/composables/useBrokenImages'
 import BioLeapPlayerCard from '@/components/BioLeapPlayerCard.vue'
+import { useDateSelect } from '@/composables/useDateSelect'
 
 interface PlayerRaw {
   id: string; name: string; avatar: string; age: number | null
   currentPoints: number; isActive: boolean
   birthDate?: string | null; trainingStartDate?: string | null; gender?: string | null
+  fatherHeightCm?: number | null; motherHeightCm?: number | null
 }
 
 interface CardData {
@@ -211,11 +236,46 @@ const players = ref<PlayerRaw[]>([])
 const cards = ref<CardData[]>([])
 const loading = ref(true)
 const editingPlayer = ref<PlayerRaw | null>(null)
-const playerForm = ref({ name: '', avatar: '😊', age: null as number | null, gender: '', birthDate: '', fatherHeightCm: null as number | null, motherHeightCm: null as number | null, trainingStartDate: '' })
+const playerForm = ref({ name: '', avatar: '😊', gender: '', birthDate: '', fatherHeightCm: null as number | null, motherHeightCm: null as number | null, trainingStartDate: '' })
 const showPicker = ref(false)
 const pickerTab = ref<'emoji' | 'logo' | 'photo'>('emoji')
 const isDragging = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// ── 日期选择 composable ──
+const birthDateModel = computed({
+  get: () => playerForm.value.birthDate,
+  set: (val: string) => { playerForm.value.birthDate = val },
+})
+const trainDateModel = computed({
+  get: () => playerForm.value.trainingStartDate,
+  set: (val: string) => { playerForm.value.trainingStartDate = val },
+})
+
+const {
+  year: birthYear, month: birthMonth, day: birthDay,
+  years: birthYears, daysInMonth: birthDaysInMonth,
+} = useDateSelect(birthDateModel as any, { yearRange: [2010, 2026] })
+
+const {
+  year: trainYear, month: trainMonth, day: trainDay,
+  years: trainYears, daysInMonth: trainDaysInMonth,
+} = useDateSelect(trainDateModel as any, { yearRange: [2020, 2026] })
+
+// ── 年龄自动计算 ──
+function calcAge(birthDate: string): number {
+  const birth = new Date(birthDate)
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const m = now.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+  return age
+}
+
+const computedAge = computed(() => {
+  if (!playerForm.value.birthDate) return null
+  try { return calcAge(playerForm.value.birthDate) } catch { return null }
+})
 
 const emojiList = [
   '😊', '⚽', '🌟', '💪', '🔥', '🎯', '🏆', '😎', '🤩', '👑',
@@ -353,14 +413,14 @@ async function uploadFile(file: File) {
 async function addPlayer() {
   if (!playerForm.value.name) return
   try {
-    const payload: Record<string, unknown> = { name: playerForm.value.name, avatar: playerForm.value.avatar, age: playerForm.value.age }
+    const payload: Record<string, unknown> = { name: playerForm.value.name, avatar: playerForm.value.avatar }
     if (playerForm.value.gender) payload.gender = playerForm.value.gender
     if (playerForm.value.birthDate) payload.birthDate = new Date(playerForm.value.birthDate).toISOString()
     if (playerForm.value.fatherHeightCm != null) payload.fatherHeightCm = playerForm.value.fatherHeightCm
     if (playerForm.value.motherHeightCm != null) payload.motherHeightCm = playerForm.value.motherHeightCm
     if (playerForm.value.trainingStartDate) payload.trainingStartDate = playerForm.value.trainingStartDate
     await coachApi.createPlayer(payload)
-    playerForm.value = { name: '', avatar: '😊', age: null, gender: '', birthDate: '', fatherHeightCm: null, motherHeightCm: null, trainingStartDate: '' }
+    playerForm.value = { name: '', avatar: '😊', gender: '', birthDate: '', fatherHeightCm: null, motherHeightCm: null, trainingStartDate: '' }
     await loadAll()
   } catch (e: any) { alert(e.response?.data?.error || '添加失败') }
 }
@@ -370,7 +430,7 @@ function startEdit(card: CardData) {
   editingPlayer.value = p
   const bd = card.player.birthDate
   playerForm.value = {
-    name: p.name, avatar: p.avatar, age: p.age,
+    name: p.name, avatar: p.avatar,
     gender: p.gender || '',
     birthDate: bd ? new Date(bd).toISOString().slice(0, 10) : '',
     fatherHeightCm: p.fatherHeightCm ?? null,
@@ -382,13 +442,13 @@ function startEdit(card: CardData) {
 
 function cancelEdit() {
   editingPlayer.value = null
-  playerForm.value = { name: '', avatar: '😊', age: null, gender: '', birthDate: '', fatherHeightCm: null, motherHeightCm: null, trainingStartDate: '' }
+  playerForm.value = { name: '', avatar: '😊', gender: '', birthDate: '', fatherHeightCm: null, motherHeightCm: null, trainingStartDate: '' }
 }
 
 async function saveEdit() {
   if (!editingPlayer.value) return
   try {
-    const payload: Record<string, unknown> = { name: playerForm.value.name, avatar: playerForm.value.avatar, age: playerForm.value.age }
+    const payload: Record<string, unknown> = { name: playerForm.value.name, avatar: playerForm.value.avatar }
     if (playerForm.value.gender) payload.gender = playerForm.value.gender
     if (playerForm.value.birthDate) payload.birthDate = new Date(playerForm.value.birthDate).toISOString()
     if (playerForm.value.fatherHeightCm != null) payload.fatherHeightCm = playerForm.value.fatherHeightCm
@@ -396,7 +456,7 @@ async function saveEdit() {
     if (playerForm.value.trainingStartDate) payload.trainingStartDate = playerForm.value.trainingStartDate
     await coachApi.updatePlayer(editingPlayer.value.id, payload)
     editingPlayer.value = null
-    playerForm.value = { name: '', avatar: '😊', age: null, gender: '', birthDate: '', fatherHeightCm: null, motherHeightCm: null, trainingStartDate: '' }
+    playerForm.value = { name: '', avatar: '😊', gender: '', birthDate: '', fatherHeightCm: null, motherHeightCm: null, trainingStartDate: '' }
     await loadAll()
   } catch (e: any) { alert(e.response?.data?.error || '保存失败') }
 }
@@ -504,6 +564,24 @@ async function deletePlayerItem(id: string) {
 /* Date label wrappers */
 .date-label-wrap { display: inline-flex; align-items: center; gap: 2px; }
 .date-label { font-size: 11px; color: #888; white-space: nowrap; }
+
+/* Date select dropdowns (desktop) */
+.date-select-group { display: inline-flex; align-items: center; gap: 2px; }
+.date-sel-yr { width: 62px; padding: 8px 3px; font-size: 13px; text-align: center; }
+.date-sel-mo { width: 50px; padding: 8px 2px; font-size: 13px; text-align: center; }
+.date-sel-dy { width: 48px; padding: 8px 2px; font-size: 13px; text-align: center; }
+
+/* Computed age display */
+.age-display { font-size: 13px; font-weight: 600; color: #333; white-space: nowrap; min-width: 40px; text-align: center; }
+
+/* Desktop-only / Mobile-only visibility */
+.desktop-only { display: inline-flex; }
+.mobile-only { display: none; }
+@media (max-width: 768px) {
+  .desktop-only { display: none; }
+  .mobile-only { display: inline-block; }
+}
+
 .inline-select {
   padding: 8px 8px;
   border-radius: 10px;

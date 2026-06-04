@@ -82,15 +82,15 @@ import { playerApi, assessmentApi, pipelineApi } from '@/api'
 import BioLeapPlayerCard from '@/components/BioLeapPlayerCard.vue'
 import PipelineDebugPanel from '@/components/PipelineDebugPanel.vue'
 import TrendLineChart from '@/components/TrendLineChart.vue'
-import type { PipelineSnapshot } from '@shared/types'
+import type { PipelineSnapshotData } from '@shared/types'
 
 const route = useRoute()
 const detail = ref<any>(null)
 const assessments = ref<any[]>([])
 const pipelineResult = ref<any>(null)
-const pipelineSnapshot = ref<PipelineSnapshot | null>(null)
-const prevSnapshot = ref<PipelineSnapshot | null>(null)
-const snapshots = ref<PipelineSnapshot[]>([])
+const pipelineSnapshot = ref<PipelineSnapshotData | null>(null)
+const prevSnapshot = ref<PipelineSnapshotData | null>(null)
+const snapshots = ref<PipelineSnapshotData[]>([])
 const loading = ref(true)
 const computing = ref(false)
 

@@ -188,7 +188,14 @@
                 :class="{ equipped: inv.isEquipped, usable: isUsable(inv) && !isDisplayMode, disabled: isDisplayMode }"
                 @click="!isDisplayMode && handleUseItem(inv)"
               >
-                <span class="item-emoji">{{ getItemEmoji(inv.itemId) }}</span>
+                <img
+                  v-if="getItemImage(inv.itemId)"
+                  :src="getItemImage(inv.itemId)"
+                  class="item-emoji"
+                  alt="icon"
+                  @error="brokenImages.add(inv.itemId)"
+                />
+                <span v-else class="item-emoji">{{ getItemEmoji(inv.itemId) }}</span>
                 <span class="item-name">{{ getItemName(inv.itemId) }}</span>
                 <span v-if="getItemUsageType(inv.itemId) === 'charge'" class="item-qty charge">
                   还剩 {{ inv.quantity }} 次
@@ -315,7 +322,7 @@
     </main>
 
     <!-- 惊喜掉落弹窗 -->
-    <LuckyDropModal :drop="luckyDrop" @close="luckyDrop = null" />
+    <LuckyDropModal :drop="luckyDrop" :player-id="playerId" @close="luckyDrop = null" />
   </div>
 </template>
 
@@ -323,7 +330,6 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { publicApi } from '@/api'
-import api from '@/api'
 import BioLeapPlayerCard from '@/components/BioLeapPlayerCard.vue'
 import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
 import LuckyDropModal from '@/components/LuckyDropModal.vue'
@@ -377,6 +383,7 @@ interface ShopItemDef {
   usageType?: string
   usageCount?: number | null
   imageUrl?: string | null
+  effect?: any
 }
 
 interface ScoreRecord {
@@ -614,6 +621,8 @@ async function loadData() {
         emoji: i.emoji || (i.type === 'food' ? '🍎' : i.type === 'decoration' ? '🎩' : '✨'),
         type: i.type,
         usageType: (i as any).usageType || i.type,
+        imageUrl: i.imageUrl ?? null,
+        effect: i.effect ?? null,
       }))
     }
 
@@ -653,6 +662,17 @@ function getItemName(itemId: string): string {
 
 function getItemEmoji(itemId: string): string {
   return shopItems.value.find(i => i.id === itemId)?.emoji || '📦'
+}
+
+function getItemImage(itemId: string): string | undefined {
+  if (brokenImages.has(itemId)) return undefined
+  const item = shopItems.value.find(i => i.id === itemId)
+  if (item?.imageUrl) return item.imageUrl
+  // 徽章类物品显示 SVG 队徽
+  if (item?.type === 'badge' && item.effect?.equip?.badgeSvg) {
+    return item.effect.equip.badgeSvg
+  }
+  return undefined
 }
 
 function getItemType(itemId: string): string {
@@ -746,38 +766,12 @@ async function handleUseItem(inv: InventoryItem) {
         type: i.type,
         price: i.price,
         usageType: (i as any).usageType || i.type,
+        imageUrl: i.imageUrl ?? null,
+        effect: i.effect ?? null,
       }))
     }
   } catch (e: any) {
     actionError.value = e.response?.data?.error || '使用失败'
-  }
-}
-
-// 头像上传回调（传给 AvatarPicker）
-async function handleAvatarUpload(file: File): Promise<string> {
-  const formData = new FormData()
-  formData.append('avatar', file)
-  const res = await api.post(`/public/player/${playerId}/avatar`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
-  return res.data.data.url
-}
-
-// 头像变更回调（emoji / logo / photo URL）
-async function handleAvatarChange(avatar: string) {
-  try {
-    const res = await api.put(`/public/player/${playerId}/avatar`, { avatar })
-    if (playerStats.value) {
-      playerStats.value.avatar = avatar
-    }
-    // 更新积分（头像消耗了10分）
-    if (res.data.success && currentPoints.value >= 10) {
-      currentPoints.value -= 10
-    }
-  } catch (e: any) {
-    const msg = e?.response?.data?.error || '头像更新失败'
-    actionError.value = msg
-    setTimeout(() => { actionError.value = '' }, 4000)
   }
 }
 
@@ -1480,6 +1474,9 @@ onUnmounted(() => {
 }
 
 .item-emoji {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
   font-size: 28px;
   line-height: 1;
 }

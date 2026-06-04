@@ -284,7 +284,12 @@ function getItemEmoji(itemId: string): string {
 function getItemImage(itemId: string): string | undefined {
   if (brokenImages.value.has(itemId)) return undefined
   const item = shopItems.value.find((i) => i.id === itemId)
-  return item?.imageUrl ?? undefined
+  if (item?.imageUrl) return item.imageUrl
+  // 徽章类物品显示 SVG 队徽
+  if (item?.type === 'badge' && item.effect?.equip?.badgeSvg) {
+    return item.effect.equip.badgeSvg
+  }
+  return undefined
 }
 
 function handleInvImageError(itemId: string) {

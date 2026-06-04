@@ -22,7 +22,9 @@ app.use(express.json({ limit: '10mb' }))
 // Static files for uploaded avatars, team logos and pet images
 const uploadDir = process.env.UPLOAD_DIR || './public'
 app.use('/avatars', express.static(`${uploadDir}/avatars`))
-// Logos served directly by nginx from client/dist/logos/
+app.use('/logos', express.static(`${uploadDir}/logos`))
+app.use('/logos', express.static(`${uploadDir}/logos/clubs`)) // 兜底：/logos/xxx.svg → clubs/xxx.svg
+// Logos also served by nginx in production from client/dist/logos/
 app.use('/images', express.static(`${uploadDir}/images`))
 
 app.use('/api', publicRouter)

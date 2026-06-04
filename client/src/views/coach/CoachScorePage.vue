@@ -342,8 +342,6 @@ function computedDimScore(dimKey: string): number {
 
 // 有子指标的维度列表
 const DIMS_WITH_SUBS = Object.keys(SUB_INDICATOR_MAP)
-// 无子指标的维度（必须手动打分）
-const DIMS_WITHOUT_SUBS = ['techExec', 'engagement']
 
 // 获取维度的有效分数（优先自动计算，其次手动）
 function effectiveDimScore(dimKey: string): number {

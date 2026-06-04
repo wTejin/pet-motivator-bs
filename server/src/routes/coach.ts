@@ -159,21 +159,38 @@ coachRouter.get('/players', authenticate, requireRole('coach'), async (req: Auth
   })
   const data = players.map(p => ({
     id: p.id, name: p.name, avatar: p.avatar,
-    currentPoints: p.currentPoints,
-    isActive: p.isActive, pet: p.pet || null, createdAt: Number(p.createdAt),
+    currentPoints: p.currentPoints, isActive: p.isActive,
+    age: p.age, birthDate: p.birthDate, trainingStartDate: p.trainingStartDate,
+    gender: p.gender, fatherHeightCm: p.fatherHeightCm, motherHeightCm: p.motherHeightCm,
+    pet: p.pet || null, createdAt: Number(p.createdAt),
   }))
   res.json({ success: true, data })
 })
 
+// ── 辅助：从出生日期推算年龄 ──
+function computeAgeFromBirthDate(birthDate: string): number | null {
+  if (!birthDate) return null
+  try {
+    const birth = new Date(birthDate)
+    if (isNaN(birth.getTime())) return null
+    const now = new Date()
+    let age = now.getFullYear() - birth.getFullYear()
+    const m = now.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+    return age
+  } catch { return null }
+}
+
 coachRouter.post('/players', authenticate, requireRole('coach'), async (req: AuthRequest, res: Response) => {
   const { name, avatar, age, birthDate, trainingStartDate, gender, fatherHeightCm, motherHeightCm } = req.body
   const now = Date.now()
+  const finalAge = age != null ? Number(age) : computeAgeFromBirthDate(birthDate)
   const player = await db.player.create({
     data: {
       coachId: coachId(req),
       name,
       avatar: avatar || '😊',
-      age: age != null ? Number(age) : null,
+      age: finalAge,
       birthDate: birthDate || null,
       trainingStartDate: trainingStartDate || null,
       gender: gender || null,
@@ -191,12 +208,19 @@ coachRouter.put('/players/:id', authenticate, requireRole('coach'), async (req: 
   const { name, avatar, age, birthDate, trainingStartDate, gender, fatherHeightCm, motherHeightCm, isActive } = req.body
   const player = await db.player.findFirst({ where: { id, coachId: coachId(req) } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
+  // Auto-compute age from birthDate when age not explicitly provided
+  let finalAge: number | null | undefined
+  if (age !== undefined) {
+    finalAge = age != null ? Number(age) : null
+  } else if (birthDate !== undefined) {
+    finalAge = computeAgeFromBirthDate(birthDate)
+  }
   const updated = await db.player.update({
     where: { id },
     data: {
       ...(name !== undefined && { name }),
       ...(avatar !== undefined && { avatar }),
-      ...(age !== undefined && { age: age != null ? Number(age) : null }),
+      ...(finalAge !== undefined && { age: finalAge }),
       ...(birthDate !== undefined && { birthDate: birthDate || null }),
       ...(trainingStartDate !== undefined && { trainingStartDate: trainingStartDate || null }),
       ...(gender !== undefined && { gender: gender || null }),

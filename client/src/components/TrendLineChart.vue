@@ -23,7 +23,7 @@
     <!-- Legend -->
     <div v-if="snapshots.length >= 2" class="flex flex-wrap gap-3 mt-3 text-xs">
       <label v-for="dim in dimLegends" :key="dim.key" class="flex items-center gap-1 cursor-pointer">
-        <input type="checkbox" :checked="dim.visible" @change="dim.visible = $event.target.checked; draw()" />
+        <input type="checkbox" :checked="dim.visible" @change="dim.visible = ($event.target as HTMLInputElement).checked; draw()" />
         <span class="w-2.5 h-2.5 rounded-full inline-block" :style="{ background: dim.color }"></span>
         <span class="text-slate-400">{{ dim.name }}</span>
       </label>
@@ -34,10 +34,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { BIO_LEAP_DIMENSIONS } from '@shared/types'
-import type { PipelineSnapshot } from '@shared/types'
+import type { PipelineSnapshotData } from '@shared/types'
 
 const props = defineProps<{
-  snapshots: PipelineSnapshot[]
+  snapshots: PipelineSnapshotData[]
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
