@@ -92,15 +92,15 @@ adminRouter.post('/coaches', authenticate, requireRole('admin'), async (req: Aut
   if (existing) return res.status(400).json({ success: false, error: '该手机号已注册' })
 
   const now = Date.now()
-  const trialUntil = now + config.trialDays * 24 * 3600 * 1000
+  const authorizedUntil = now + 100 * 365 * 24 * 3600 * 1000
 
   const coach = await db.coach.create({
     data: {
       phone,
       passwordHash: await hashPassword(getDefaultPassword(phone)),
       name: phone,
-      trialUntil,
-      authorizedUntil: trialUntil,
+      trialUntil: 0,
+      authorizedUntil,
       createdAt: now,
       updatedAt: now,
     },

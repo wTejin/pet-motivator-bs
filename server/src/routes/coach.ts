@@ -4,7 +4,7 @@ import multer from 'multer'
 import path from 'path'
 import { hashPassword, verifyPassword, signToken } from '../services/auth'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
-import { config, getDefaultPassword } from '../config'
+import { getDefaultPassword } from '../config'
 
 const db = new PrismaClient()
 export const coachRouter = Router()
@@ -44,7 +44,7 @@ coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
   if (existing) return res.status(400).json({ success: false, error: '该手机号已注册' })
 
   const now = Date.now()
-  const trialUntil = now + config.trialDays * 24 * 3600 * 1000
+  const authorizedUntil = now + 100 * 365 * 24 * 3600 * 1000  // 无试用期限制
   const passwordHash = await hashPassword(password && password.length >= 6 ? password : getDefaultPassword(phone))
   const coach = await db.coach.create({
     data: {
@@ -52,7 +52,7 @@ coachRouter.post('/register', async (req: AuthRequest, res: Response) => {
       name: phone,
       school: school || '',
       teamName: school ? `${school}球队` : '',
-      trialUntil, authorizedUntil: trialUntil,
+      trialUntil: 0, authorizedUntil,
       createdAt: now, updatedAt: now,
     },
   })

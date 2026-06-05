@@ -84,7 +84,6 @@
               @keyup.enter="handleRegister"
             />
           </div>
-          <p class="text-gray-500 text-sm mb-4 text-center">注册后享7天免费试用</p>
           <div v-if="error" class="text-red-500 text-sm mb-4 text-center">{{ error }}</div>
           <button
             :disabled="loading"
