@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { playLuckyDrop } from '../composables/useSound'
 
 export interface LuckyDropItem {
   id: string
@@ -56,6 +57,13 @@ function takeIt() {
   if (autoTimer) { clearTimeout(autoTimer); autoTimer = null }
   dismiss()
 }
+
+// 音效：惊喜掉落出现时播放
+watch(() => props.drop, (val) => {
+  if (val) {
+    playLuckyDrop(val.animation || val.item?.rarity)
+  }
+})
 
 function goToBackpack() {
   if (autoTimer) { clearTimeout(autoTimer); autoTimer = null }

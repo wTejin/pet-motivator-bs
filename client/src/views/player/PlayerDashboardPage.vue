@@ -110,6 +110,7 @@
             :potentialIndex="(playerStats as any)?.potentialIndex ?? null"
             :potentialTier="(playerStats as any)?.potentialTier ?? null"
             class="fifa-desktop"
+            @avatar-click="openAvatarPicker"
           />
           <div v-else class="card-placeholder fifa-desktop">
             <p class="placeholder-title">暂无能力数据</p>
@@ -231,6 +232,7 @@
             :potentialTier="(playerStats as any)?.potentialTier ?? null"
             class="fifa-mobile"
             style="margin-top:12px"
+            @avatar-click="openAvatarPicker"
           />
           <div v-else class="card-placeholder fifa-mobile" style="margin-top:12px">
             <p class="placeholder-title">暂无能力数据</p>
@@ -323,6 +325,13 @@
 
     <!-- 惊喜掉落弹窗 -->
     <LuckyDropModal :drop="luckyDrop" :player-id="playerId" @close="luckyDrop = null" />
+    <!-- 头像选择器 -->
+    <AvatarPicker
+      :visible="showAvatarPicker"
+      :model-value="currentAvatar"
+      @update:model-value="onAvatarChange"
+      @close="showAvatarPicker = false"
+    />
   </div>
 </template>
 
@@ -334,6 +343,8 @@ import BioLeapPlayerCard from '@/components/BioLeapPlayerCard.vue'
 import PlayerPetCard from '@/components/player/PlayerPetCard.vue'
 import LuckyDropModal from '@/components/LuckyDropModal.vue'
 import type { LuckyDropResult } from '@/components/LuckyDropModal.vue'
+import AvatarPicker from '@/components/AvatarPicker.vue'
+import { playCheckin, playEvolution } from '@/composables/useSound'
 import type { PlayerStats } from '@shared/types'
 
 const route = useRoute()
@@ -412,6 +423,12 @@ const checkinLoading = ref(false)
 const luckyDrop = ref<LuckyDropResult | null>(null)
 const feedEffectActive = ref(false)
 const evolutionEffectActive = ref(false)
+// 头像选择器
+const showAvatarPicker = ref(false)
+const avatarSaving = ref(false)
+const avatarChangeCount = ref(0)
+const avatarCost = ref(0)
+const avatarNextCost = ref(0)
 interface StagePreview {
   key: string
   emoji: string
@@ -440,7 +457,54 @@ function triggerFeedEffect() {
 
 function triggerEvolutionEffect() {
   evolutionEffectActive.value = true
+  playEvolution()
   setTimeout(() => { evolutionEffectActive.value = false }, 2500)
+}
+
+// ── 头像 ──
+const currentAvatar = computed(() => {
+  return (playerStats.value as any)?.avatar || '😊'
+})
+
+function calcAvatarCost(count: number) {
+  if (count < 1) return 0
+  return Math.round(10 * Math.pow(1.1, count - 1))
+}
+
+function openAvatarPicker() {
+  if (isDisplayMode.value) return
+  // 使用本地计算展示费用（首次为免费）
+  const cnt = avatarChangeCount.value
+  avatarCost.value = calcAvatarCost(cnt)
+  avatarNextCost.value = calcAvatarCost(cnt + 1)
+  showAvatarPicker.value = true
+}
+
+async function onAvatarChange(newAvatar: string) {
+  if (avatarSaving.value || !newAvatar || newAvatar === currentAvatar.value) return
+  avatarSaving.value = true
+  actionError.value = ''
+  actionMessage.value = ''
+  try {
+    const res = await publicApi.updateAvatar(playerId, newAvatar)
+    const data = res.data.data
+    // 更新本地状态
+    if (bioLeapPlayer.value) {
+      bioLeapPlayer.value.avatar = data.avatar
+    }
+    currentPoints.value = data.currentPoints
+    avatarChangeCount.value = data.changeCount
+    avatarCost.value = data.cost
+    avatarNextCost.value = data.nextCost
+    actionMessage.value = data.cost > 0
+      ? '头像已更新！花费 ' + data.cost + ' 分，下次更换需 ' + data.nextCost + ' 分'
+      : '头像已更新！（首次免费）'
+    showAvatarPicker.value = false
+  } catch (e: any) {
+    actionError.value = e.response?.data?.error || '头像更新失败'
+  } finally {
+    avatarSaving.value = false
+  }
 }
 
 const shopLink = computed(() => {
@@ -907,6 +971,7 @@ async function handleCheckin() {
         msg += ` 🎉 ${b.label} +${b.points}分`
       }
     }
+    playCheckin()
     actionMessage.value = msg
     // 惊喜掉落弹窗
     if (data.luckyDrop) {

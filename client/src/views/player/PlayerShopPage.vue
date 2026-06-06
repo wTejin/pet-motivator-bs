@@ -189,6 +189,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { playerApi } from '@/api'
+import { playPurchase, playEquip } from '@/composables/useSound'
 
 const route = useRoute()
 const playerId = route.params.playerId as string
@@ -331,7 +332,8 @@ async function handleBuy(itemId: string) {
     inventory.value = shopRes.data.data?.inventory || []
     currentPoints.value = shopRes.data.data?.currentPoints || 0
     const itemName = getItemName(itemId)
-    statusMessage.value = `✅ 购买成功！${getItemEmoji(itemId)} ${itemName}`
+    statusMessage.value = '✅ 购买成功！' + getItemEmoji(itemId) + ' ' + itemName
+    playPurchase()
   } catch (e: any) {
     statusError.value = e.response?.data?.error || '购买失败'
   }
@@ -346,7 +348,9 @@ async function handleEquip(inventoryId: string) {
     inventory.value = shopRes.data.data?.inventory || []
     const inv = inventory.value.find((i) => i.id === inventoryId)
     const itemName = getItemName(inv?.itemId || '')
-    statusMessage.value = inv?.isEquipped ? `🎩 已装备 ${itemName}` : `👒 已卸下 ${itemName}`
+    const isEquipped = inv?.isEquipped
+    statusMessage.value = isEquipped ? '🎩 已装备 ' + itemName : '👒 已卸下 ' + itemName
+    playEquip()
   } catch (e: any) {
     statusError.value = e.response?.data?.error || '操作失败'
   }

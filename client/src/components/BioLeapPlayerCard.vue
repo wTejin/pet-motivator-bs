@@ -5,13 +5,15 @@
     <!-- Header -->
     <div class="card-header">
       <div class="header-left">
-        <img
-          v-if="isImageAvatar(player.avatar) && !brokenAvatars.has(player.avatar)"
-          :src="player.avatar"
-          class="card-avatar-img"
-          @error="onAvatarError(player.avatar)"
-        />
-        <span v-else class="header-avatar-emoji">{{ isImageAvatar(player.avatar) ? '🙂' : player.avatar }}</span>
+        <div class="avatar-clickable" @click="emit('avatar-click')" title="点击更换头像">
+          <img
+            v-if="isImageAvatar(player.avatar) && !brokenAvatars.has(player.avatar)"
+            :src="player.avatar"
+            class="card-avatar-img"
+            @error="onAvatarError(player.avatar)"
+          />
+          <span v-else class="header-avatar-emoji">{{ isImageAvatar(player.avatar) ? '🙂' : player.avatar }}</span>
+        </div>
         <div class="header-info">
           <div class="header-name">{{ player.name }}</div>
           <div class="header-meta">
@@ -116,6 +118,10 @@ const props = defineProps<{
   potentialTier?: string | null
   hedgingMultiplier?: number | null
   correctionMeta?: { isFallback?: boolean; sampleSize?: number } | null
+}>()
+
+const emit = defineEmits<{
+  'avatar-click': []
 }>()
 
 const genderLabel = computed(() => {
@@ -302,6 +308,18 @@ const radarSize = computed(() => {
 .header-left {
   display: flex; align-items: center; gap: 8px;
   min-width: 0; flex: 1;
+}
+.avatar-clickable {
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s, filter 0.15s;
+}
+.avatar-clickable:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+}
+.avatar-clickable:active {
+  transform: scale(0.95);
 }
 .card-avatar-img {
   width: 36px; height: 36px;
