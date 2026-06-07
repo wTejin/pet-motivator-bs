@@ -187,7 +187,7 @@ async function saveTeam() {
       teamName: editForm.value.teamName,
       teamLogo: editForm.value.teamLogo,
     })
-    await auth.refreshUser()
+    auth.updateTeam(editForm.value.teamName, editForm.value.teamLogo)
     showTeamEdit.value = false
   } catch (e: any) {
     alert(e.response?.data?.error || '保存失败')

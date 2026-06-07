@@ -1206,17 +1206,25 @@ publicRouter.post('/public/player/:playerId/checkin', async (req, res) => {
       })
     })
 
-    // 检查连续训练奖励（在事务外，避免阻塞）
-    const streakResult = await calculateStreakBonus(playerId, player.coachId, now)
-
-    // 惊喜掉落（每日签到 + streak 都可能触发）
-    const luckyDrop = streakResult.luckyDrop ?? (await tryLuckyDrop({ playerId, trigger: 'checkin' }))
+    // 检查连续训练奖励 + 惊喜掉落（在事务外，失败不影响签到成功）
+    let luckyDrop = null
+    let bonusEvents: { days: number; points: number; label: string }[] = []
+    try {
+      const streakResult = await calculateStreakBonus(playerId, player.coachId, now)
+      bonusEvents = streakResult.bonusEvents
+      luckyDrop = streakResult.luckyDrop
+      if (!luckyDrop) {
+        luckyDrop = await tryLuckyDrop({ playerId, trigger: 'checkin' })
+      }
+    } catch (e: any) {
+      console.error('[Signin] streak/drop error:', e.message)
+    }
 
     res.json({
       success: true,
       data: {
         checkinPoints: CHECKIN_POINTS,
-        streakBonus: streakResult.bonusEvents,
+        streakBonus: bonusEvents,
         currentPoints: updatedPlayer.currentPoints,
         luckyDrop,
       },
@@ -1262,7 +1270,7 @@ async function calculateStreakBonus(playerId: string, coachId: string, now: numb
   }
 
   // 3 天奖励（限制最近 7 天内只能获得一次，支持每周重复获得）
-  if (streak === 3) {
+  if (streak >= 3) {
     const sevenDaysAgo = now - 7 * 24 * 3600 * 1000
     const hasBonus3 = await db.scoreRecord.findFirst({
       where: { playerId, type: 'bonus', reason: '连续3天活跃奖励', createdAt: { gte: sevenDaysAgo } },
@@ -1281,12 +1289,12 @@ async function calculateStreakBonus(playerId: string, coachId: string, now: numb
       })
       bonusEvents.push({ days: 3, points: 15, label: '连续3天活跃奖励' })
       // 惊喜掉落：连续3天签到
-      luckyDrop = await tryLuckyDrop({ playerId, trigger: 'streak3' })
+      try { luckyDrop = await tryLuckyDrop({ playerId, trigger: 'streak3' }) } catch (e: any) { console.error('[LuckyDrop] streak3 error:', e.message) }
     }
   }
 
   // 7 天奖励（限制最近 30 天内只能获得一次，支持每月重复获得）
-  if (streak === 7) {
+  if (streak >= 7) {
     const thirtyDaysAgo = now - 30 * 24 * 3600 * 1000
     const hasBonus7 = await db.scoreRecord.findFirst({
       where: { playerId, type: 'bonus', reason: '连续7天活跃奖励', createdAt: { gte: thirtyDaysAgo } },
@@ -1304,8 +1312,18 @@ async function calculateStreakBonus(playerId: string, coachId: string, now: numb
         data: { currentPoints: { increment: 50 }, updatedAt: now },
       })
       bonusEvents.push({ days: 7, points: 50, label: '连续7天活跃奖励' })
-      // 惊喜掉落：连续7天签到必掉
-      luckyDrop = await tryLuckyDrop({ playerId, trigger: 'streak7' })
+      // 惊喜掉落：连续7天签到必掉；全收集时给积分补偿
+      try {
+        luckyDrop = await tryLuckyDrop({ playerId, trigger: 'streak7' })
+        if (!luckyDrop) {
+          await db.scoreRecord.create({
+            data: { coachId, playerId, ruleId: null, indicatorId: null, points: 30, type: 'bonus',
+              reason: '全收集奖励 · 7天连续活跃', operatorType: 'system', operatorId: 'system', createdAt: now },
+          })
+          await db.player.update({ where: { id: playerId }, data: { currentPoints: { increment: 30 }, updatedAt: now } })
+          bonusEvents.push({ days: 7, points: 30, label: '全收集奖励（稀有池已集齐）' })
+        }
+      } catch (e: any) { console.error('[LuckyDrop] streak7 error:', e.message) }
     }
   }
 

@@ -28,7 +28,7 @@ export interface LuckyDropResult {
 const DROP_CONFIG: Record<LuckyTrigger, { baseChance: number; pool: string[] }> = {
   checkin:    { baseChance: 0.12, pool: ['common', 'uncommon'] },
   streak3:    { baseChance: 0.30, pool: ['uncommon', 'rare'] },
-  streak7:    { baseChance: 1.00, pool: ['rare', 'epic'] },       // 必掉
+  streak7:    { baseChance: 1.00, pool: ['rare', 'epic', 'legendary'] }, // 必掉
   assessment: { baseChance: 0.20, pool: ['uncommon', 'rare'] },
 }
 
@@ -66,52 +66,30 @@ export async function tryLuckyDrop(params: {
     return null
   }
 
-  // 2. 查该玩家已拥有的惊喜掉落物品 ID（PlayerInventory 无 ShopItem 关联，分两步查）
-  const allLuckyIds = (
-    await db.shopItem.findMany({
-      where: { isLuckyDrop: true },
-      select: { id: true },
-    })
-  ).map(i => i.id)
-  const owned = await db.playerInventory.findMany({
-    where: {
-      playerId,
-      itemId: { in: allLuckyIds },
-    },
-    select: { itemId: true },
-  })
+  // 2. 查候选池 + 玩家已拥有物品（用于降权，不排除）
+  const [candidates, owned] = await Promise.all([
+    db.shopItem.findMany({
+      where: { isLuckyDrop: true, rarity: { in: config.pool }, isActive: true },
+      select: { id: true, name: true, emoji: true, description: true, type: true, rarity: true, imageClass: true, imageUrl: true, effect: true },
+    }),
+    db.playerInventory.findMany({
+      where: { playerId },
+      select: { itemId: true },
+    }),
+  ])
   const ownedIds = new Set(owned.map(o => o.itemId))
 
-  // 3. 查候选池：限定稀有度、排除已拥有、只取启用中的惊喜掉落物品
-  const candidates = await db.shopItem.findMany({
-    where: {
-      isLuckyDrop: true,
-      rarity: { in: config.pool },
-      isActive: true,
-      id: { notIn: ownedIds.size > 0 ? [...ownedIds] : ['__none__'] },
-    },
-    select: {
-      id: true,
-      name: true,
-      emoji: true,
-      description: true,
-      type: true,
-      rarity: true,
-      imageClass: true,
-      imageUrl: true,
-      effect: true,
-    },
-  })
-
   if (candidates.length === 0) {
-    // 全收集 —— 无物品可掉
+    // 候选池为空（无配置物品）
     return null
   }
 
-  // 4. 按稀有度权重加权随机
+  // 3. 按稀有度权重加权随机，已拥有物品降权 20%
+  const DUP_PENALTY = 0.8
   const weighted: { item: typeof candidates[0]; w: number }[] = []
   for (const item of candidates) {
-    const w = RARITY_WEIGHTS[item.rarity] || 1
+    let w = RARITY_WEIGHTS[item.rarity] || 1
+    if (ownedIds.has(item.id)) w *= DUP_PENALTY
     weighted.push({ item, w })
   }
 
@@ -127,7 +105,7 @@ export async function tryLuckyDrop(params: {
   }
   if (!picked) picked = candidates[candidates.length - 1] // 保险
 
-  // 5. 写入玩家背包
+  // 4. 写入玩家背包
   const now = Date.now()
   await db.playerInventory.create({
     data: {

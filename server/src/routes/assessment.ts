@@ -99,9 +99,14 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     // 评估折算积分：均星×1.5，最低 1 分（确保参与就有收获）
     const earnPoints = Math.max(1, Math.round(avgScore * 1.5))
 
-    // ── 事务写入：评估 + 积分 + 玩家余额（双重防并发）──
+    // ── 事务写入：评估 + 积分 + 玩家余额（advisory lock 防并发）──
     const assessment = await db.$transaction(async (tx) => {
-      // 事务内再次检查，防止并发重复评估
+      // 按球员 ID 加排他锁，串行化同一球员的并发评估请求
+      await tx.$queryRawUnsafe(
+        `SELECT pg_advisory_xact_lock(hashtext($1))`,
+        `assessment_${playerId}`,
+      )
+      // 锁内再次检查，确保未重复评估
       const dupCheck = await tx.dailyAssessment.findFirst({
         where: { playerId, createdAt: { gte: todayStart.getTime() } },
       })
@@ -163,7 +168,11 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     // 惊喜掉落：评估均星 ≥ 4 有概率触发
     let luckyDrop = null
     if (avgScore >= 4) {
-      luckyDrop = await tryLuckyDrop({ playerId, trigger: 'assessment' })
+      try {
+        luckyDrop = await tryLuckyDrop({ playerId, trigger: 'assessment' })
+      } catch (e: any) {
+        console.error('[LuckyDrop] assessment drop error:', e.message)
+      }
     }
 
     res.json({

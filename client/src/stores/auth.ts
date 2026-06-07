@@ -70,6 +70,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updateTeam(teamName: string, teamLogo: string) {
+    if (user.value) {
+      user.value = { ...user.value, teamName, teamLogo }
+    }
+  }
+
   return {
     token,
     user,
@@ -82,5 +88,6 @@ export const useAuthStore = defineStore('auth', () => {
     refreshMode,
     setMode,
     refreshUser,
+    updateTeam,
   }
 })

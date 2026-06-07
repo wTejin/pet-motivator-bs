@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { config } from '../config'
+import { computePipeline } from '../services/pipeline'
 
 const db = new PrismaClient()
 export const biometricsRouter = Router()
@@ -59,6 +60,9 @@ biometricsRouter.post('/players/:playerId/biometrics', authenticate, requireRole
     })
 
     res.json({ success: true, data: { ...record, measuredAt: Number(record.measuredAt) } })
+
+    // 异步触发管道重算（响应优先，管道后台计算）
+    computePipeline(playerId).catch((err: any) => console.error('[Pipeline] async compute after biometric:', err.message))
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
   }

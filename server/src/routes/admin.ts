@@ -10,6 +10,8 @@ import fs from 'fs'
 const db = new PrismaClient()
 export const adminRouter = Router()
 
+const VALID_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary']
+
 const imageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     const dir = (process.env.UPLOAD_DIR || './public') + '/images/pets'
@@ -361,6 +363,9 @@ adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: 
   if (!name || !type || price == null) {
     return res.status(400).json({ success: false, error: '名称、类型、价格必填' })
   }
+  if (rarity && !VALID_RARITIES.includes(rarity)) {
+    return res.status(400).json({ success: false, error: `无效的稀有度：${rarity}，可选值：${VALID_RARITIES.join(', ')}` })
+  }
   const now = Date.now()
   const inferredUsageType = usageType || inferUsageType(type)
   const item = await db.shopItem.create({
@@ -388,6 +393,9 @@ adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: 
 adminRouter.put('/shop-items/:id', authenticate, requireRole('admin'), async (req: AuthRequest, res: Response) => {
   const id = req.params.id as string
   const { name, description, emoji, type, price, stock, effect, usageType, usageCount, imageUrl, imageClass, sortOrder, isActive, isLuckyDrop, rarity } = req.body
+  if (rarity && !VALID_RARITIES.includes(rarity)) {
+    return res.status(400).json({ success: false, error: `无效的稀有度：${rarity}，可选值：${VALID_RARITIES.join(', ')}` })
+  }
   const existing = await db.shopItem.findUnique({ where: { id } })
   if (!existing) return res.status(404).json({ success: false, error: '商品不存在' })
 
