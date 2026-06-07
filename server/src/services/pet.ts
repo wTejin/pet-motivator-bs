@@ -22,11 +22,17 @@ export function syncLevelWithStage(pet: { stage: string; level: number }, stage?
   pet.level = STAGE_TO_LEVEL[s] ?? pet.level ?? 1
 }
 
-/** 检查是否满足进化条件 */
-export function canEvolve(pet: { stage: string; hunger: number; mood: number; carePoints: number }): boolean {
-  if (pet.carePoints >= 1000 && pet.stage !== 'rare') return pet.hunger >= 50 && pet.mood >= 50
-  if (pet.carePoints >= 600 && pet.stage === 'level2') return pet.hunger >= 50 && pet.mood >= 50
-  if (pet.carePoints >= 300 && pet.stage === 'level1') return pet.hunger >= 50 && pet.mood >= 50
-  if (pet.carePoints >= 100 && pet.stage === 'egg') return pet.hunger >= 50 && pet.mood >= 50
-  return false
+/** carePoints 增量更新 + 进化检查，返回可直接展开到 Prisma update data 的字段 */
+export function applyCarePoints(
+  pet: { stage: string; hunger: number; mood: number; carePoints: number; level: number },
+  bonus: number,
+  now: bigint = BigInt(Date.now()),
+): { carePoints: number; stage?: string; level?: number; evolvedAt?: bigint } {
+  const carePoints = Math.min(1000, pet.carePoints + bonus)
+  const newStage = getStageByCarePoints(carePoints)
+  const shouldEvolve = newStage !== pet.stage && pet.hunger >= 50 && pet.mood >= 50
+  if (!shouldEvolve) return { carePoints }
+  pet.level = STAGE_TO_LEVEL[newStage] ?? pet.level ?? 1
+  return { carePoints, stage: newStage, level: pet.level, evolvedAt: now }
 }
+

@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { computePipeline } from '../services/pipeline'
 import { tryLuckyDrop } from '../services/luckyDrop.js'
-import { getStageByCarePoints, syncLevelWithStage } from '../services/pet.js'
+import { applyCarePoints } from '../services/pet.js'
 
 const db = new PrismaClient()
 export const assessmentRouter = Router()
@@ -154,17 +154,7 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
 
     const pet = await db.pet.findUnique({ where: { playerId } })
     if (pet) {
-      const newCarePoints = Math.min(1000, pet.carePoints + careBonus)
-      const newStage = getStageByCarePoints(newCarePoints)
-      const shouldEvolve = newStage !== pet.stage && pet.hunger >= 50 && pet.mood >= 50
-      const updateData: any = { carePoints: newCarePoints }
-      if (shouldEvolve) {
-        updateData.stage = newStage
-        updateData.evolvedAt = BigInt(Date.now())
-        syncLevelWithStage(pet, newStage)
-        updateData.level = pet.level
-      }
-      await db.pet.update({ where: { playerId }, data: updateData })
+      await db.pet.update({ where: { playerId }, data: applyCarePoints(pet, careBonus) })
     }
 
     // 异步触发管道重算

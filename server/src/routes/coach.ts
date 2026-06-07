@@ -278,6 +278,9 @@ coachRouter.post('/scores', authenticate, requireRole('coach'), async (req: Auth
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
 
   // ── 积分通胀防护：单次记分上限 ──
+  if (typeof points !== 'number' || isNaN(points)) {
+    return res.status(400).json({ success: false, error: '积分值无效' })
+  }
   const absPoints = Math.abs(points)
   const maxPoints = indicatorId ? 30 : 20
   if (absPoints > maxPoints) {

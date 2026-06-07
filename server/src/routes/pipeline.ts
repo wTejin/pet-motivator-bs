@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { computePipeline } from '../services/pipeline'
 import { computeMaturityOffset, calcChronologicalAge } from '../services/pipeline/mirwald'
-import { getStageByCarePoints, syncLevelWithStage } from '../services/pet.js'
+import { applyCarePoints } from '../services/pet.js'
 
 const db = new PrismaClient()
 export const pipelineRouter = Router()
@@ -37,19 +37,9 @@ pipelineRouter.post('/players/:playerId/compute', authenticate, requireRole('coa
     if (pipelineCareBonus > 0) {
       const pet = await db.pet.findUnique({ where: { playerId: req.params.playerId as string } })
       if (pet) {
-        const newCarePoints = Math.min(1000, pet.carePoints + pipelineCareBonus)
-        const newStage = getStageByCarePoints(newCarePoints)
-        const shouldEvolve = newStage !== pet.stage && pet.hunger >= 50 && pet.mood >= 50
-        const updateData: any = { carePoints: newCarePoints }
-        if (shouldEvolve) {
-          updateData.stage = newStage
-          updateData.evolvedAt = BigInt(Date.now())
-          syncLevelWithStage(pet, newStage)
-          updateData.level = pet.level
-        }
         await db.pet.update({
           where: { playerId: req.params.playerId as string },
-          data: updateData,
+          data: applyCarePoints(pet, pipelineCareBonus),
         })
       }
     }
