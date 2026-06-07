@@ -15,6 +15,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Project junk (Windows / WSL2 leakage)
+*.bat
+截图.*
+临时文件.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
