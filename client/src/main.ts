@@ -7,7 +7,7 @@ import './style.css'
 const app = createApp(App)
 
 // 全局 Vue 错误处理：记录错误但不崩溃
-app.config.errorHandler = (err, instance, info) => {
+app.config.errorHandler = (err, _instance, info) => {
   console.error('[Vue Error]', info, err)
   // 仅对渲染错误降级处理，非渲染错误继续抛出
   if (info.includes('render') || info.includes('setup')) {
