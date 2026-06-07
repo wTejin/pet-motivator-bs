@@ -277,6 +277,16 @@ coachRouter.post('/scores', authenticate, requireRole('coach'), async (req: Auth
   const player = await db.player.findFirst({ where: { id: playerId, coachId: coachId(req) } })
   if (!player) return res.status(404).json({ success: false, error: '学生不存在' })
 
+  // ── 积分通胀防护：单次记分上限 ──
+  const absPoints = Math.abs(points)
+  const maxPoints = indicatorId ? 30 : 20
+  if (absPoints > maxPoints) {
+    return res.status(400).json({
+      success: false,
+      error: `单次${type === 'penalty' ? '扣分' : '加分'}不能超过 ${maxPoints} 分，当前输入 ${absPoints} 分`,
+    })
+  }
+
   if (indicatorId) {
     const customIndicator = await db.customIndicator.findUnique({ where: { id: indicatorId } })
     if (customIndicator) {

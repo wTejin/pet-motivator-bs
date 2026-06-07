@@ -4,6 +4,7 @@ import multer from 'multer'
 import path from 'path'
 import { AuthRequest } from '../middleware/auth'
 import { tryLuckyDrop } from '../services/luckyDrop.js'
+import { getStageByCarePoints, STAGE_TO_LEVEL, syncLevelWithStage } from '../services/pet.js'
 
 const db = new PrismaClient()
 export const playerRouter = Router()
@@ -348,8 +349,8 @@ async function handleGetPet(req: Request, res: Response) {
 
   const hours = (Date.now() - Number(pet.lastDecayAt)) / 3600000
   if (hours > 0) {
-    pet.hunger = Math.max(0, pet.hunger - Math.floor(hours * 3))
-    pet.mood = Math.max(0, pet.mood - Math.floor(hours * 2))
+    pet.hunger = Math.max(0, pet.hunger - Math.floor(hours * 1))
+    pet.mood = Math.max(0, pet.mood - Math.floor(hours * 0.5))
     pet.lastDecayAt = BigInt(Date.now())
     await db.pet.update({
       where: { playerId },
@@ -492,6 +493,10 @@ async function handleFeed(req: Request, res: Response) {
 
   const pet = await db.pet.findUnique({ where: { playerId } })
   if (!pet) return res.status(404).json({ success: false, error: '宠物不存在' })
+
+  if (pet.hunger >= 90) {
+    return res.status(400).json({ success: false, error: '宠物已经吃饱啦 🐾，等它饿了再喂吧~' })
+  }
 
   const FEEDING_COST = 5, FEEDING_CARE_POINTS = 3, HUNGER_GAIN = 25, MOOD_GAIN_FEED = 1
   if (player.currentPoints < FEEDING_COST) {
@@ -1355,24 +1360,6 @@ publicRouter.post('/public/player/:playerId/pet/create', async (req, res) => {
     },
   })
 })
-
-// ===== 辅助 =====
-function getStageByCarePoints(carePoints: number): string {
-  if (carePoints >= 1000) return 'rare'
-  if (carePoints >= 600) return 'level3'
-  if (carePoints >= 300) return 'level2'
-  if (carePoints >= 100) return 'level1'
-  return 'egg'
-}
-
-const STAGE_TO_LEVEL: Record<string, number> = {
-  egg: 1, level1: 2, level2: 3, level3: 4, rare: 5,
-  baby: 2, teen: 3, adult: 4, // 兼容旧 stage 命名
-}
-
-function syncLevelWithStage(pet: any, stage: string) {
-  pet.level = STAGE_TO_LEVEL[stage] ?? pet.level ?? 1
-}
 
 function serializeSpecies(speciesDef: any) {
   if (!speciesDef) return null

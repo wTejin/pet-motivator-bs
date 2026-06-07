@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://postgres:postgres@localhost:5432/pet-motivator"]
+    },
+    "feishu": {
+      "command": "npx",
+      "args": ["-y", "cc-lark"],
+      "env": {
+        "FEISHU_APP_ID": "cli_a924875ea6f85bcc",
+        "FEISHU_APP_SECRET": "5wxJ2zRjaOfd9APvSI86pcJuKS0w3Rhg"
+      }
+    },
+    "ssh": {
+      "command": "npx",
+      "args": ["-y", "@fangjunjie/ssh-mcp-server", "--host", "119.29.252.83", "--port", "22", "--username", "root", "--privateKey", "C:/Users/Administrator/.ssh/id_ed25519_tencent"]
+    }
+  }
+}
