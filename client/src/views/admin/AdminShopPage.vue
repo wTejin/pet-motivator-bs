@@ -374,8 +374,9 @@ async function handleShopImageUpload(e: Event) {
   const target = e.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
-  if (file.size > 2 * 1024 * 1024) {
-    alert('文件大小不能超过 2MB')
+  if (file.size > 5 * 1024 * 1024) {
+    alert('文件大小不能超过 5MB')
+    target.value = ''
     return
   }
   const formData = new FormData()
@@ -386,7 +387,7 @@ async function handleShopImageUpload(e: Event) {
       shopForm.value.imageUrl = res.data.data.url
     }
   } catch (err: any) {
-    alert(err.response?.data?.error || '上传失败')
+    alert(err.response?.data?.error || '上传失败，请检查文件格式（支持 JPG/PNG/GIF/WebP/SVG）')
   }
   target.value = ''
 }

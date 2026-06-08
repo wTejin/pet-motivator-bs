@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星宠契约 - 下载中心</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 50%, #f5f0ff 100%);
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 8px 40px rgba(102, 126, 234, 0.15);
+    max-width: 520px;
+    width: 100%;
+    padding: 40px 32px 32px;
+    text-align: center;
+  }
+  .logo {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 18px;
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  }
+  h1 { font-size: 26px; color: #2d3748; margin-bottom: 4px; }
+  .sub { font-size: 14px; color: #a0aec0; margin-bottom: 28px; }
+  .row { display: flex; gap: 24px; align-items: flex-start; }
+  @media (max-width: 460px) { .row { flex-direction: column; align-items: center; } }
+  .qr-box {
+    flex-shrink: 0;
+    background: #f7fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+  }
+  .qr-box canvas, .qr-box img { display: block; width: 140px; height: 140px; }
+  .qr-label { font-size: 12px; color: #a0aec0; margin-top: 8px; }
+  .btns { flex: 1; display: flex; flex-direction: column; gap: 14px; width: 100%; }
+  .btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-size: 15px; font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-android {
+    background: linear-gradient(135deg, #3ddc84, #00c853);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(61, 220, 132, 0.35);
+  }
+  .btn-android:hover { box-shadow: 0 6px 20px rgba(61, 220, 132, 0.45); }
+  .btn-windows {
+    background: linear-gradient(135deg, #0078d4, #106ebe);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(0, 120, 212, 0.35);
+  }
+  .btn-windows:hover { box-shadow: 0 6px 20px rgba(0, 120, 212, 0.45); }
+  .btn-web {
+    background: #fff;
+    color: #667eea;
+    border: 2px solid #667eea;
+  }
+  .btn-web:hover { background: #f8f9ff; }
+  .btn-icon { font-size: 22px; flex-shrink: 0; }
+  .btn-info { font-size: 12px; font-weight: 400; opacity: 0.85; }
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 28px 0 20px;
+    color: #cbd5e0; font-size: 13px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+  }
+  .steps { text-align: left; }
+  .step {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 12px; font-size: 13px; color: #4a5568; line-height: 1.5;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .footer { margin-top: 24px; font-size: 12px; color: #cbd5e0; }
+  .footer a { color: #667eea; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">⭐</div>
+  <h1>星宠契约</h1>
+  <p class="sub">班级激励系统 — 让成长看得见</p>
+
+  <div class="row">
+    <div class="qr-box">
+      <div id="qrcode"></div>
+      <div class="qr-label">📱 扫码打开网站</div>
+    </div>
+
+    <div class="btns">
+      <a class="btn btn-android" href="/download/星宠契约-v1.0.0.apk">
+        <span class="btn-icon">🤖</span>
+        <span>Android 版下载<span class="btn-info"><br>APK · 约 4MB</span></span>
+      </a>
+      <a class="btn btn-windows" href="/download/星宠契约-安装.bat">
+        <span class="btn-icon">🖥️</span>
+        <span>Windows 安装脚本<span class="btn-info"><br>BAT · 一键创建桌面快捷方式</span></span>
+      </a>
+      <a class="btn btn-web" href="/">
+        <span class="btn-icon">🌐</span>
+        <span>直接打开网页版</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="divider">💡 使用说明</div>
+  <div class="steps">
+    <div class="step">
+      <span class="step-num">1</span>
+      <span><b>Android 手机/平板</b>：点击上方绿色按钮下载 APK，安装后桌面出现「星宠契约」图标，点击即用。</span>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <span><b>教室 Windows 大屏</b>：下载 BAT 脚本，双击运行后桌面自动创建快捷方式。</span>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <span><b>浏览器直接访问</b>：用 Chrome/Edge 打开后，地址栏点「安装」可装 PWA 应用。</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    下载有问题？直接访问 <a href="/">xingchong.online</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+  new QRCode(document.getElementById('qrcode'), {
+    text: 'https://xingchong.online',
+    width: 140,
+    height: 140,
+    colorDark: '#2d3748',
+    colorLight: '#f7fafc',
+  });
+</script>
+</body>
+</html>

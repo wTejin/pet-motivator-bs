@@ -201,8 +201,8 @@ async function upload(file: File) {
     const url = await props.uploadFn(file)
     emit('update:modelValue', url)
     emit('close')
-  } catch {
-    alert('上传失败，请重试')
+  } catch (e: any) {
+    alert(e?.message || e?.response?.data?.error || '上传失败，请检查文件格式（支持 JPG/PNG/GIF/WebP）')
   }
 }
 </script>

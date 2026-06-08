@@ -435,6 +435,12 @@ async function handleFileChange(event: Event, stage: StageInfo) {
   const file = input.files?.[0]
   if (!file) return
 
+  if (file.size > 5 * 1024 * 1024) {
+    alert('文件大小不能超过 5MB')
+    input.value = ''
+    return
+  }
+
   const formData = new FormData()
   formData.append('image', file)
 
@@ -446,7 +452,7 @@ async function handleFileChange(event: Event, stage: StageInfo) {
       alert(res.data.error || '上传失败')
     }
   } catch (e: any) {
-    alert(e.response?.data?.error || '上传失败')
+    alert(e.response?.data?.error || '上传失败，请检查文件格式（支持 JPG/PNG/GIF/WebP/SVG）')
   } finally {
     input.value = ''
   }
@@ -456,6 +462,12 @@ function handleCreateStageFile(event: Event, stageKey: string) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('文件大小不能超过 5MB')
+    input.value = ''
+    return
+  }
 
   const formData = new FormData()
   formData.append('image', file)
@@ -469,7 +481,7 @@ function handleCreateStageFile(event: Event, stageKey: string) {
       }
     })
     .catch((e: any) => {
-      alert(e.response?.data?.error || '上传失败')
+      alert(e.response?.data?.error || '上传失败，请检查文件格式（支持 JPG/PNG/GIF/WebP/SVG）')
     })
     .finally(() => {
       input.value = ''

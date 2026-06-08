@@ -29,9 +29,14 @@ const imageUpload = multer({
   storage: imageStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+    // 日志记录实际 MIME 类型，便于排查上传问题
+    console.log('[Upload] mimetype:', file.mimetype, 'originalname:', file.originalname, 'size:', file.size)
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-webp', 'image/svg+xml']
     if (allowed.includes(file.mimetype)) cb(null, true)
-    else cb(new Error('仅支持 jpg/png/gif/webp/svg 格式'))
+    else {
+      console.log('[Upload] REJECTED mimetype:', file.mimetype)
+      cb(new Error(`不支持的文件类型: ${file.mimetype}，仅支持 JPG/PNG/GIF/WebP/SVG`))
+    }
   },
 })
 

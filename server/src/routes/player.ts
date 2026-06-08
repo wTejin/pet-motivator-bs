@@ -23,7 +23,8 @@ const avatarUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter(_req, file, cb) {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    cb(null, allowed.includes(file.mimetype))
+    if (allowed.includes(file.mimetype)) cb(null, true)
+    else cb(new Error('仅支持 JPG/PNG/GIF/WebP 格式'))
   },
 })
 
