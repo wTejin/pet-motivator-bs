@@ -10,9 +10,9 @@
   "icons": [
     {
       "src": "/favicon.svg",
-      "sizes": "48x46",
+      "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-192x192.png",
