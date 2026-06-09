@@ -5,6 +5,8 @@ import path from 'path'
 import { AuthRequest } from '../middleware/auth'
 import { tryLuckyDrop } from '../services/luckyDrop.js'
 import { getStageByCarePoints, STAGE_TO_LEVEL, syncLevelWithStage } from '../services/pet.js'
+import { parseEffect, isBackgroundItem, getBackgroundId } from '../utils/effect'
+import { resolveBackground, resolveBackgroundsForSkins, resolveBackgroundFromMaps } from '../services/background'
 
 const db = new PrismaClient()
 export const playerRouter = Router()
@@ -53,37 +55,9 @@ publicRouter.get('/public/players/:phone', async (req, res) => {
     : []
   const accessoryMap = new Map(accessoryDefs.map(a => [a.id, a]))
 
-  // 批量查询背景信息（优先 PetBackgroundDef，兜底 ShopItem）
+  // 批量查询背景信息（统一走 background service）
   const skinIds = [...new Set(players.map(p => p.pet?.currentSkin).filter(Boolean) as string[])]
-  const bgDefs = skinIds.length > 0
-    ? await db.petBackgroundDef.findMany({ where: { id: { in: skinIds } } })
-    : []
-  const bgDefMap = new Map(bgDefs.map(b => [b.id, b]))
-
-  // 不限制 type，只要 effect 里有 backgroundId 就算背景商品
-  const allItems = await db.shopItem.findMany()
-  const bgItems = allItems.filter((it: any) => {
-    const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
-    return !!eff?.equip?.backgroundId
-  })
-  const bgItemMap = new Map<string, any>()
-  for (const it of bgItems) {
-    const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
-    const bid = eff?.equip?.backgroundId
-    if (bid) bgItemMap.set(bid, it)
-    // 更宽松兜底：也按 ShopItem.id 索引
-    if (it.id) bgItemMap.set(it.id, it)
-  }
-
-  function resolveBackground(currentSkin: string) {
-    if (!currentSkin || currentSkin === 'default') return null
-    const def = bgDefMap.get(currentSkin)
-    const item = bgItemMap.get(currentSkin)
-    return {
-      cssGradient: def?.cssGradient || item?.imageClass || undefined,
-      imageUrl: def?.imageUrl || item?.imageUrl || undefined,
-    }
-  }
+  const { bgDefMap, bgItemMap } = await resolveBackgroundsForSkins(skinIds)
 
   res.json({
     success: true,
@@ -105,7 +79,7 @@ publicRouter.get('/public/players/:phone', async (req, res) => {
                 return def ? { id: def.id, name: def.name, emoji: def.emoji, imageUrl: def.imageUrl || '', position: def.position } : null
               })
               .filter(Boolean),
-            background: resolveBackground(p.pet.currentSkin),
+            background: resolveBackgroundFromMaps(p.pet.currentSkin, bgDefMap, bgItemMap),
           }
         : null,
     })),
@@ -384,7 +358,7 @@ async function handleGetPet(req: Request, res: Response) {
 
     for (const e of remainingEquipped) {
       const it = await db.shopItem.findUnique({ where: { id: e.itemId } })
-      const eff = it?.effect as any
+      const eff = parseEffect(it?.effect)
       if (it?.type === 'accessory' && eff?.equip?.decoration) {
         decorationIds.push(eff.equip.decoration)
       }
@@ -410,37 +384,10 @@ async function handleGetPet(req: Request, res: Response) {
 
   const speciesDef = await db.petSpeciesDef.findUnique({ where: { id: pet.speciesId } })
 
-  // 查询宠物背景（优先 PetBackgroundDef，兜底 ShopItem）
-  let backgroundDef: { cssGradient?: string; imageUrl?: string } | null = null
-  if (pet.currentSkin && pet.currentSkin !== 'default') {
-    const bgDef = await db.petBackgroundDef.findUnique({ where: { id: pet.currentSkin } })
-    if (bgDef) {
-      backgroundDef = { cssGradient: bgDef.cssGradient, imageUrl: bgDef.imageUrl || undefined }
-    }
-    // 兜底：PetBackgroundDef 没有图片时，从 ShopItem 中找
-    if (!backgroundDef?.imageUrl) {
-      // 不限制 type，只要 effect 里有 backgroundId 就算背景商品
-      const allItems = await db.shopItem.findMany()
-      const bgItems = allItems.filter((it: any) => {
-        const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
-        return !!eff?.equip?.backgroundId
-      })
-      let bgItem = bgItems.find((it: any) => {
-        const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
-        return eff?.equip?.backgroundId === pet.currentSkin
-      })
-      // 更宽松兜底：直接按 ShopItem.id 匹配
-      if (!bgItem) {
-        bgItem = bgItems.find((it: any) => it.id === pet.currentSkin)
-      }
-      if (bgItem) {
-        backgroundDef = {
-          cssGradient: backgroundDef?.cssGradient || bgItem.imageClass || undefined,
-          imageUrl: bgItem.imageUrl || backgroundDef?.imageUrl || undefined,
-        }
-      }
-    }
-  }
+  // 查询宠物背景（统一走 background service）
+  const backgroundDef = pet.currentSkin && pet.currentSkin !== 'default'
+    ? await resolveBackground(pet.currentSkin)
+    : null
 
   const player = await db.player.findUnique({ where: { id: playerId }, select: { currentPoints: true } })
 
@@ -807,8 +754,7 @@ async function handleEquip(req: Request, res: Response) {
 
   const rawUsageType = (item.usageType as string) || 'equip'
   const usageType = (item.type === 'accessory' || item.type === 'background') ? rawUsageType : rawUsageType
-  const itemEffect = (item.effect as any) || {}
-  const hasBgEffect = !!itemEffect?.equip?.backgroundId
+  const hasBgEffect = isBackgroundItem(item.effect)
   const equipLikeTypes = ['equip', 'replace', 'rent']
   // 背景类物品始终可装备
   if (!equipLikeTypes.includes(usageType) && !hasBgEffect) {
@@ -838,7 +784,7 @@ async function handleEquip(req: Request, res: Response) {
     }
   }
 
-  const isBackgroundItem = item.type === 'background' || (usageType === 'replace' && (item.effect as any)?.equip?.backgroundId)
+  const isBg = item.type === 'background' || (usageType === 'replace' && isBackgroundItem(item.effect))
 
   // 1. 处理当前物品的装备状态
   if (wasEquipped) {
@@ -850,7 +796,7 @@ async function handleEquip(req: Request, res: Response) {
   }
 
   // 2. 如果是装备背景，自动卸下其他已装备的背景（背景只能同时装备一个）
-  if (!wasEquipped && isBackgroundItem) {
+  if (!wasEquipped && isBg) {
     const otherBackgrounds = await db.playerInventory.findMany({
       where: { playerId, isEquipped: true, id: { not: inventoryId } },
     })
@@ -870,23 +816,22 @@ async function handleEquip(req: Request, res: Response) {
 
   for (const e of equipped) {
     const it = await db.shopItem.findUnique({ where: { id: e.itemId } })
-    const eff = it?.effect as any
+    const eff = parseEffect(it?.effect)
     const itUsageType = (it?.usageType as string) || 'equip'
 
     const isAccessory = it?.type === 'accessory' || (itUsageType === 'equip' && eff?.equip?.decoration)
-    const isBackground = it?.type === 'background' || (itUsageType === 'replace' && eff?.equip?.backgroundId)
+    const isBgItem = it?.type === 'background' || (itUsageType === 'replace' && !!eff?.equip?.backgroundId)
 
     if (isAccessory && eff?.equip?.decoration) {
       decorationIds.push(eff.equip.decoration)
     }
-    if (isBackground) {
-      // 优先使用 effect.equip.backgroundId，没有则用 ShopItem.id 兜底
-      currentSkin = eff?.equip?.backgroundId || e.itemId
+    if (isBgItem) {
+      currentSkin = getBackgroundId(it?.effect) || e.itemId
     }
   }
 
   // 4. 卸下背景时恢复默认背景
-  if (wasEquipped && isBackgroundItem) {
+  if (wasEquipped && isBg) {
     currentSkin = 'default'
   }
 
@@ -906,35 +851,10 @@ async function handleEquip(req: Request, res: Response) {
     position: a.position as any,
   }))
 
-  // 查询当前背景信息（优先 PetBackgroundDef，兜底 ShopItem）
-  let background: { cssGradient?: string; imageUrl?: string } | null = null
-  if (currentSkin && currentSkin !== 'default') {
-    const bgDef = await db.petBackgroundDef.findUnique({ where: { id: currentSkin } })
-    if (bgDef) {
-      background = { cssGradient: bgDef.cssGradient, imageUrl: bgDef.imageUrl || undefined }
-    }
-    if (!background?.imageUrl) {
-      // 不限制 type，只要 effect 里有 backgroundId 就算背景商品
-      const allItems = await db.shopItem.findMany()
-      const bgItems = allItems.filter((it: any) => {
-        const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
-        return !!eff?.equip?.backgroundId
-      })
-      let bgItem = bgItems.find((it: any) => {
-        const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
-        return eff?.equip?.backgroundId === currentSkin
-      })
-      if (!bgItem) {
-        bgItem = bgItems.find((it: any) => it.id === currentSkin)
-      }
-      if (bgItem) {
-        background = {
-          cssGradient: background?.cssGradient || bgItem.imageClass || undefined,
-          imageUrl: bgItem.imageUrl || background?.imageUrl || undefined,
-        }
-      }
-    }
-  }
+  // 查询当前背景信息（统一走 background service）
+  const background = currentSkin && currentSkin !== 'default'
+    ? await resolveBackground(currentSkin)
+    : null
 
   res.json({
     success: true,
@@ -965,10 +885,10 @@ async function handleUse(req: Request, res: Response) {
   const item = await db.shopItem.findUnique({ where: { id: inv.itemId } })
   if (!item) return res.status(404).json({ success: false, error: '商品不存在' })
 
-  const effect = item.effect as any
+  const parsedEffect = parseEffect(item.effect)
 
   // 背景类物品禁止"使用"，必须走装备流程
-  if (effect?.equip?.backgroundId) {
+  if (isBackgroundItem(item.effect)) {
     return res.status(400).json({ success: false, error: '背景类物品请到背包中使用「装备」功能' })
   }
 
@@ -981,7 +901,7 @@ async function handleUse(req: Request, res: Response) {
   const pet = await db.pet.findUnique({ where: { playerId } })
   if (!pet) return res.status(404).json({ success: false, error: '宠物不存在' })
 
-  const consumeEff = effect?.consume || effect || {}
+  const consumeEff = parsedEffect?.consume || parsedEffect || {}
   const now = Date.now()
 
   if (consumeEff?.hunger) pet.hunger = Math.max(0, Math.min(100, pet.hunger + Number(consumeEff.hunger)))

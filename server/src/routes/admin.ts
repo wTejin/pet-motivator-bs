@@ -6,6 +6,8 @@ import { hashPassword, verifyPassword, signToken } from '../services/auth'
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth'
 import { config, getDefaultPassword } from '../config'
 import fs from 'fs'
+import { parseEffect, isBackgroundItem, getBackgroundId } from '../utils/effect'
+import { syncBackgroundDef } from '../services/background'
 
 const db = new PrismaClient()
 export const adminRouter = Router()
@@ -351,25 +353,6 @@ function inferUsageType(type: string): string {
   if (type === 'background') return 'replace'
   if (type === 'toy') return 'charge'
   return 'consume'
-}
-
-// 背景类商品有图片时自动同步到 PetBackgroundDef
-async function syncBackgroundDef(type: string, imageUrl?: string | null, effect?: any, name?: string) {
-  if (type !== 'background' || !imageUrl) return
-  const bgId = effect?.equip?.backgroundId as string | undefined
-  if (!bgId) return
-  await db.petBackgroundDef.upsert({
-    where: { id: bgId },
-    create: {
-      id: bgId,
-      name: name || bgId,
-      imageUrl,
-      cssGradient: '',
-      thumbnailColor: '#333333',
-    },
-    update: { imageUrl },
-  })
-  console.log(`[PetBackgroundDef] synced "${bgId}" with image ${imageUrl}`)
 }
 
 // ---------- 魔法集市 ----------
