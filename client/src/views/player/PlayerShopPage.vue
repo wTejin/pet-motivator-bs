@@ -148,7 +148,7 @@
               </div>
               <div class="inv-actions">
                 <button
-                  v-if="['accessory', 'background'].includes(getItemType(inv.itemId) || '')"
+                  v-if="['accessory', 'background'].includes(getItemType(inv.itemId) || '') || hasBgEffect(inv.itemId)"
                   :disabled="isDisplayMode"
                   class="action-btn"
                   :class="inv.isEquipped ? 'secondary' : 'primary'"
@@ -157,7 +157,7 @@
                   {{ inv.isEquipped ? '卸下' : '装备' }}
                 </button>
                 <button
-                  v-if="['food', 'toy', 'magic'].includes(getItemType(inv.itemId) || '')"
+                  v-if="!hasBgEffect(inv.itemId) && ['food', 'toy', 'magic'].includes(getItemType(inv.itemId) || '')"
                   :disabled="isDisplayMode"
                   class="action-btn use"
                   @click="handleUse(inv.id)"
@@ -300,6 +300,12 @@ function handleInvImageError(itemId: string) {
 function getItemType(itemId: string): string {
   const item = shopItems.value.find((i) => i.id === itemId)
   return item?.type || ''
+}
+
+/** 检查物品是否有背景效果 — 用于按钮判断兜底 */
+function hasBgEffect(itemId: string): boolean {
+  const item = shopItems.value.find((i) => i.id === itemId)
+  return !!((item?.effect as any)?.equip?.backgroundId)
 }
 
 function usageTypeLabel(usageType: string | undefined, usageCount: number | null | undefined): string {

@@ -12,7 +12,7 @@ export const publicRouter = Router()
 
 // ── 头像上传配置 ──
 const avatarStorage = multer.diskStorage({
-  destination: process.env.UPLOAD_DIR || './public/avatars',
+  destination: process.env.UPLOAD_DIR || path.resolve(__dirname, '../../public/avatars'),
   filename(_req, file, cb) {
     const ext = path.extname(file.originalname) || '.png'
     cb(null, `avatar-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`)
@@ -60,7 +60,12 @@ publicRouter.get('/public/players/:phone', async (req, res) => {
     : []
   const bgDefMap = new Map(bgDefs.map(b => [b.id, b]))
 
-  const bgItems = await db.shopItem.findMany({ where: { type: 'background' } })
+  // 不限制 type，只要 effect 里有 backgroundId 就算背景商品
+  const allItems = await db.shopItem.findMany()
+  const bgItems = allItems.filter((it: any) => {
+    const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
+    return !!eff?.equip?.backgroundId
+  })
   const bgItemMap = new Map<string, any>()
   for (const it of bgItems) {
     const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
@@ -414,7 +419,12 @@ async function handleGetPet(req: Request, res: Response) {
     }
     // 兜底：PetBackgroundDef 没有图片时，从 ShopItem 中找
     if (!backgroundDef?.imageUrl) {
-      const bgItems = await db.shopItem.findMany({ where: { type: 'background' } })
+      // 不限制 type，只要 effect 里有 backgroundId 就算背景商品
+      const allItems = await db.shopItem.findMany()
+      const bgItems = allItems.filter((it: any) => {
+        const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
+        return !!eff?.equip?.backgroundId
+      })
       let bgItem = bgItems.find((it: any) => {
         const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
         return eff?.equip?.backgroundId === pet.currentSkin
@@ -797,8 +807,11 @@ async function handleEquip(req: Request, res: Response) {
 
   const rawUsageType = (item.usageType as string) || 'equip'
   const usageType = (item.type === 'accessory' || item.type === 'background') ? rawUsageType : rawUsageType
+  const itemEffect = (item.effect as any) || {}
+  const hasBgEffect = !!itemEffect?.equip?.backgroundId
   const equipLikeTypes = ['equip', 'replace', 'rent']
-  if (!equipLikeTypes.includes(usageType)) {
+  // 背景类物品始终可装备
+  if (!equipLikeTypes.includes(usageType) && !hasBgEffect) {
     return res.status(400).json({ success: false, error: '该物品不可装备' })
   }
 
@@ -901,7 +914,12 @@ async function handleEquip(req: Request, res: Response) {
       background = { cssGradient: bgDef.cssGradient, imageUrl: bgDef.imageUrl || undefined }
     }
     if (!background?.imageUrl) {
-      const bgItems = await db.shopItem.findMany({ where: { type: 'background' } })
+      // 不限制 type，只要 effect 里有 backgroundId 就算背景商品
+      const allItems = await db.shopItem.findMany()
+      const bgItems = allItems.filter((it: any) => {
+        const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
+        return !!eff?.equip?.backgroundId
+      })
       let bgItem = bgItems.find((it: any) => {
         const eff = typeof it.effect === 'string' ? JSON.parse(it.effect) : it.effect
         return eff?.equip?.backgroundId === currentSkin
@@ -947,6 +965,13 @@ async function handleUse(req: Request, res: Response) {
   const item = await db.shopItem.findUnique({ where: { id: inv.itemId } })
   if (!item) return res.status(404).json({ success: false, error: '商品不存在' })
 
+  const effect = item.effect as any
+
+  // 背景类物品禁止"使用"，必须走装备流程
+  if (effect?.equip?.backgroundId) {
+    return res.status(400).json({ success: false, error: '背景类物品请到背包中使用「装备」功能' })
+  }
+
   // 只能使用消耗类物品（food / toy / magic）或次数型玩具（charge）
   const usageType = (item.usageType as string) || 'consume'
   if (usageType !== 'consume' && usageType !== 'charge') {
@@ -956,7 +981,6 @@ async function handleUse(req: Request, res: Response) {
   const pet = await db.pet.findUnique({ where: { playerId } })
   if (!pet) return res.status(404).json({ success: false, error: '宠物不存在' })
 
-  const effect = item.effect as any
   const consumeEff = effect?.consume || effect || {}
   const now = Date.now()
 

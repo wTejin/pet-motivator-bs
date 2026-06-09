@@ -14,7 +14,7 @@ const VALID_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary']
 
 const imageStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const dir = (process.env.UPLOAD_DIR || './public') + '/images/pets'
+    const dir = (process.env.UPLOAD_DIR || path.resolve(__dirname, '../../public')) + '/images/pets'
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     cb(null, dir)
   },
@@ -348,9 +348,28 @@ adminRouter.post('/backgrounds', authenticate, requireRole('admin'), async (req:
 
 function inferUsageType(type: string): string {
   if (type === 'accessory') return 'rent'
-  if (type === 'background') return 'rent'
+  if (type === 'background') return 'replace'
   if (type === 'toy') return 'charge'
   return 'consume'
+}
+
+// 背景类商品有图片时自动同步到 PetBackgroundDef
+async function syncBackgroundDef(type: string, imageUrl?: string | null, effect?: any, name?: string) {
+  if (type !== 'background' || !imageUrl) return
+  const bgId = effect?.equip?.backgroundId as string | undefined
+  if (!bgId) return
+  await db.petBackgroundDef.upsert({
+    where: { id: bgId },
+    create: {
+      id: bgId,
+      name: name || bgId,
+      imageUrl,
+      cssGradient: '',
+      thumbnailColor: '#333333',
+    },
+    update: { imageUrl },
+  })
+  console.log(`[PetBackgroundDef] synced "${bgId}" with image ${imageUrl}`)
 }
 
 // ---------- 魔法集市 ----------
@@ -392,6 +411,8 @@ adminRouter.post('/shop-items', authenticate, requireRole('admin'), async (req: 
       createdAt: now,
     },
   })
+  // 背景类商品有图片时自动同步 PetBackgroundDef
+  await syncBackgroundDef(type, imageUrl, effect, name)
   res.json({ success: true, data: item })
 })
 
@@ -423,6 +444,12 @@ adminRouter.put('/shop-items/:id', authenticate, requireRole('admin'), async (re
   if (rarity !== undefined) updateData.rarity = rarity
 
   const updated = await db.shopItem.update({ where: { id }, data: updateData })
+  // 背景类商品有图片时自动同步 PetBackgroundDef
+  const finalType = type || existing.type
+  const finalImageUrl = imageUrl !== undefined ? imageUrl : existing.imageUrl
+  const finalEffect = effect || existing.effect
+  const finalName = name || existing.name
+  await syncBackgroundDef(finalType as string, finalImageUrl as string | null, finalEffect, finalName)
   res.json({ success: true, data: updated })
 })
 

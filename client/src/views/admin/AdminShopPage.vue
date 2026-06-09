@@ -394,7 +394,17 @@ async function handleShopImageUpload(e: Event) {
 
 function buildEffect() {
   const eff: any = {}
-  if (shopForm.value.usageType === 'consume') {
+  const isBgType = shopForm.value.type === 'background'
+
+  // 背景类始终构建 equip 效果，忽略 usageType
+  if (isBgType) {
+    const equip: any = {}
+    if (effectForm.value.mood) equip.moodBonus = Number(effectForm.value.mood)
+    // backgroundId: 优先使用手动填写，否则从名称自动生成
+    const bgId = effectForm.value.backgroundId || shopForm.value.name.replace(/[^a-zA-Z0-9一-鿿]/g, '').toLowerCase()
+    if (bgId) equip.backgroundId = bgId
+    eff.equip = equip
+  } else if (shopForm.value.usageType === 'consume') {
     const consume: any = {}
     if (effectForm.value.hunger) consume.hunger = Number(effectForm.value.hunger)
     if (effectForm.value.mood) consume.mood = Number(effectForm.value.mood)
