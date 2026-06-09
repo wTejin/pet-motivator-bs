@@ -102,7 +102,7 @@ assessmentRouter.post('/players/:playerId/assessments', authenticate, requireRol
     // ── 事务写入：评估 + 积分 + 玩家余额（advisory lock 防并发）──
     const assessment = await db.$transaction(async (tx) => {
       // 按球员 ID 加排他锁，串行化同一球员的并发评估请求
-      await tx.$queryRawUnsafe(
+      await tx.$executeRawUnsafe(
         `SELECT pg_advisory_xact_lock(hashtext($1))`,
         `assessment_${playerId}`,
       )
