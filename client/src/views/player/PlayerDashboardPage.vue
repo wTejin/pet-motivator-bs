@@ -47,6 +47,8 @@
                 :pet="pet"
                 :effects="petEffects"
                 :accessories="pet?.accessories"
+                :background-url="pet?.background?.imageUrl"
+                :background-class="pet?.background?.cssGradient"
               />
             </div>
             <div class="pet-vitals">
@@ -1206,8 +1208,6 @@ onUnmounted(() => {
   background-position: center;
   z-index: 0;
   border-radius: 16px 16px 50% 50%;
-  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
 }
 
 .pet-display-large {

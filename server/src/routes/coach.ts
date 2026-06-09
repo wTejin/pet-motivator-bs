@@ -11,7 +11,7 @@ export const coachRouter = Router()
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const dir = process.env.UPLOAD_DIR || './public/avatars'
+    const dir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../public/avatars')
     cb(null, dir)
   },
   filename: (_req, file, cb) => {

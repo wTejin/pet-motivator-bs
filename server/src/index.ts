@@ -19,13 +19,15 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 
+import path from 'path'
+
 // Static files for uploaded avatars, team logos and pet images
-const uploadDir = process.env.UPLOAD_DIR || './public'
-app.use('/avatars', express.static(`${uploadDir}/avatars`))
-app.use('/logos', express.static(`${uploadDir}/logos`))
-app.use('/logos', express.static(`${uploadDir}/logos/clubs`)) // 兜底：/logos/xxx.svg → clubs/xxx.svg
+const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../public')
+app.use('/avatars', express.static(path.join(uploadDir, 'avatars')))
+app.use('/logos', express.static(path.join(uploadDir, 'logos')))
+app.use('/logos', express.static(path.join(uploadDir, 'logos', 'clubs'))) // 兜底：/logos/xxx.svg → clubs/xxx.svg
 // Logos also served by nginx in production from client/dist/logos/
-app.use('/images', express.static(`${uploadDir}/images`))
+app.use('/images', express.static(path.join(uploadDir, 'images')))
 
 app.use('/api', publicRouter)
 app.use('/api/admin', adminRouter)

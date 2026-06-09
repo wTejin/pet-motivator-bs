@@ -1,7 +1,7 @@
 <template>
   <div class="player-pet-card" :class="[`stage-${petStage}`, ...(effects || [])]">
     <!-- 背景铺满卡片上半部分 -->
-    <div v-if="backgroundUrl || backgroundCss" class="pet-bg" :style="bgStyle"></div>
+    <div v-if="backgroundUrl || backgroundCss || backgroundClass" class="pet-bg" :class="backgroundClass" :style="bgStyle"></div>
     <div class="level-badge" :class="{ 'gold-badge': hasEffect('gold-badge') }">
       Lv.{{ pet?.level ?? 1 }}
     </div>
@@ -60,6 +60,7 @@ const props = defineProps<{
   effects?: string[]
   backgroundUrl?: string
   backgroundCss?: string
+  backgroundClass?: string
 }>()
 
 const petStage = computed(() => props.pet?.stage || 'egg')
@@ -137,11 +138,8 @@ function hasEffect(name: string): boolean {
   height: 72%;
   background-size: cover;
   background-position: center;
-  opacity: 0.88;
   z-index: 0;
   border-radius: 16px 16px 40% 40%;
-  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
 }
 
 .pet-stage-area {
@@ -153,6 +151,8 @@ function hasEffect(name: string): boolean {
   justify-content: center;
   overflow: hidden;
   z-index: 1;
+  transform: scale(1.2);
+  transform-origin: center center;
 }
 
 .pet-emoji {
@@ -249,5 +249,50 @@ function hasEffect(name: string): boolean {
 @keyframes glow-breathe {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
+}
+
+/* ── 背景皮肤 CSS 类 ── */
+
+/* 马戏团舞台 — 红白条纹 + 金色聚光灯 */
+.lucky-circus {
+  background: linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 30%, #8b0000 50%, #2d1b4e 70%, #1a0a2e 100%);
+  background-size: 200% 200%;
+  animation: circus-shift 8s ease-in-out infinite;
+}
+@keyframes circus-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* 海底世界 — 深海蓝渐变 + 波纹感 */
+.lucky-underwater {
+  background: linear-gradient(180deg, #0c4a6e 0%, #0369a1 25%, #0e7490 50%, #155e75 75%, #0c4a6e 100%);
+  background-size: 100% 200%;
+  animation: underwater-wave 6s ease-in-out infinite;
+}
+@keyframes underwater-wave {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 0% 100%; }
+}
+
+/* 梦幻城堡 — 紫色晚霞渐变 */
+.lucky-castle {
+  background: linear-gradient(180deg, #1e1b4b 0%, #5b21b6 30%, #a855f7 60%, #f9a8d4 85%, #fbbf24 100%);
+  background-size: 100% 200%;
+  animation: castle-twilight 10s ease-in-out infinite;
+}
+@keyframes castle-twilight {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 0% 100%; }
+}
+
+/* 星空 — 深空渐变 + 星光感 */
+.bg-starry {
+  background: linear-gradient(180deg, #0f0c29 0%, #1a1a3e 30%, #24243e 60%, #0f0c29 100%);
+}
+
+/* 森林 — 绿意渐变 */
+.bg-forest {
+  background: linear-gradient(180deg, #064e3b 0%, #065f46 30%, #047857 60%, #064e3b 100%);
 }
 </style>
